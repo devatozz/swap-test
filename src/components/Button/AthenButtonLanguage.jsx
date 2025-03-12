@@ -1,5 +1,4 @@
 import styled, { DefaultTheme, useTheme } from "styled-components";
-import { BREAKPOINTS } from "../home/Banner";
 export const AthenButtonLanguage = styled.button`
   padding: 5px;
   height: 48px;

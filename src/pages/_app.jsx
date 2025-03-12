@@ -9,11 +9,13 @@ import { ChakraProvider } from "@chakra-ui/react";
 import AppBar from "src/components/layout/AppBar";
 import Footer from "src/components/layout/Footer";
 import { LanguageProvider } from "src/contexts/LanguageContext";
-
+import styled from "styled-components";
 import { getFullnodeUrl } from "@mysten/sui.js/client";
 import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
+const WrapComponent = styled.div`
+  background: #101010;
+`;
 const queryClient = new QueryClient();
 const networks = {
   localnet: { url: getFullnodeUrl("localnet") },
@@ -29,19 +31,21 @@ export default function App(props) {
 
   return (
     <CacheProvider value={emotionCache}>
-      <LanguageProvider>
-        <ChakraProvider theme={theme}>
-          <QueryClientProvider client={queryClient}>
-            <SuiClientProvider networks={networks} defaultNetwork="testnet">
-              <WalletProvider autoConnect>
-                <AppBar />
-                <Component {...pageProps} />
-                <Footer />
-              </WalletProvider>
-            </SuiClientProvider>
-          </QueryClientProvider>
-        </ChakraProvider>
-      </LanguageProvider>
+      <WrapComponent>
+        <LanguageProvider>
+          <ChakraProvider theme={theme}>
+            <QueryClientProvider client={queryClient}>
+              <SuiClientProvider networks={networks} defaultNetwork="testnet">
+                <WalletProvider autoConnect>
+                  <AppBar />
+                  <Component {...pageProps} />
+                  <Footer />
+                </WalletProvider>
+              </SuiClientProvider>
+            </QueryClientProvider>
+          </ChakraProvider>
+        </LanguageProvider>
+      </WrapComponent>
     </CacheProvider>
   );
 }

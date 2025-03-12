@@ -1,9 +1,9 @@
 import { Box } from "@chakra-ui/react";
-import Banner from "src/components/home/Banner";
+import Swap from "src/components/Swap";
 export default function Index() {
   return (
     <Box>
-      <Banner />
+      <Swap />
     </Box>
   );
 }
