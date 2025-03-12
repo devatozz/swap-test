@@ -30,6 +30,8 @@
     "try_again": "Please try again.",
     "received": "Received",
     "not_found_token": "Token not found",
-    "error": "Error"
+    "error": "Error",
+    "swap": "Swap",
+    "loading_tokens": "Loading..."
   }
 }

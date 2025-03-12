@@ -29,7 +29,6 @@ const FooterWrapper = styled.div`
   background-position: center;
   background-repeat: no-repeat;
   padding-bottom: 10px;
-  background-image: url(./bg/bg-footer.png);
   box-shadow: 6px 0px 40px 0px #72feba;
   border-top: 1px solid;
   border-image-source: linear-gradient(90deg, #78ffb6 0%, #3af3e8 100%);

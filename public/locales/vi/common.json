@@ -31,6 +31,8 @@
     "try_again": "Vui lòng thử lại.",
     "received": "Nhận",
     "not_found_token": "Không tìm thấy token",
-    "error": "Lỗi"
+    "error": "Lỗi",
+    "swap": "Hoán đổi",
+    "loading_tokens": "Đang tải..."
   }
 }

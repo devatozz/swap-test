@@ -19,9 +19,11 @@ import {
   Box,
   Spinner,
   useToast,
+  Tooltip,
+  Flex,
 } from "@chakra-ui/react";
 
-import { SearchIcon } from "@chakra-ui/icons";
+import { SearchIcon, InfoIcon } from "@chakra-ui/icons";
 
 import { emptyToken } from "src/utils/utils";
 import styled from "styled-components";
@@ -98,11 +100,19 @@ const TitleText = styled.span`
   line-height: 140%; /* 28px */
 `;
 
+// Default token images if iconUrl is null
+const DEFAULT_TOKEN_IMAGES = {
+  SUI: "https://cryptologos.cc/logos/sui-sui-logo.png",
+  USDC: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
+};
+
 export default function SwapTokenModal({
-  handleChoseToken,
+  handleChoseToken = null, // Add default value to prevent errors
   isOpen,
   onClose,
   selectedAddr,
+  wallet, // Add wallet prop to get balances
+  onSelectToken, // Add alternative prop for token selection callback
 }) {
   const { t } = useLanguage();
   const toast = useToast();
@@ -116,22 +126,87 @@ export default function SwapTokenModal({
   const [loadingSearchToken, setLoadingSearchToken] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tokenObj, setTokenObj] = useState({});
+  const [tokenBalances, setTokenBalances] = useState({});
+
+  // Handle token selection with fallback to onSelectToken if handleChoseToken is not provided
+  const handleTokenSelection = useCallback(
+    (token) => {
+      if (typeof handleChoseToken === "function") {
+        handleChoseToken(token);
+      } else if (typeof onSelectToken === "function") {
+        onSelectToken(token);
+      } else {
+        console.warn("No token selection handler provided");
+      }
+      onClose();
+    },
+    [handleChoseToken, onSelectToken, onClose]
+  );
+
+  // Function to fetch token balances
+  const fetchTokenBalances = useCallback(async () => {
+    if (!wallet || !wallet.address) return;
+
+    try {
+      // This is a placeholder. You'll need to replace this with your actual balance fetching logic
+      // For example, using your wallet provider's API
+      const balances = {
+        // Replace these with your actual token IDs from the API response
+        "0x9258181f5ceac8dbffb7030890243caed69a9599d2886d957a9cb7656af3bdb3":
+          "10.5", // SUI
+        "0x69b7a7c3c200439c1b5f3b19d7d495d5966d5f08de66c69276152f8db3992ec6":
+          "100.0", // USDC
+      };
+
+      setTokenBalances(balances);
+    } catch (error) {
+      console.error("Error fetching token balances:", error);
+    }
+  }, [wallet]);
 
   // Fetch token list from Aftermath API
   const fetchTokenList = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get("https://aftermath.finance/api/tokens");
+      const response = await axios.post(
+        "https://aftermath.finance/api/coins/metadata",
+        {
+          coins: [
+            "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+            "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+          ],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
 
       if (response.data && Array.isArray(response.data)) {
-        // Create token list and object mapping
-        const tokens = response.data.map((token) => ({
-          address: token.address,
-          name: token.name,
-          symbol: token.symbol,
-          decimals: token.decimals,
-          icon: token.logoURI || "",
-        }));
+        // Transform the API response into token objects
+        const tokens = response.data.map((token) => {
+          // Use default images if iconUrl is null
+          const iconUrl =
+            token.iconUrl ||
+            (token.symbol === "SUI"
+              ? DEFAULT_TOKEN_IMAGES.SUI
+              : token.symbol === "USDC"
+              ? DEFAULT_TOKEN_IMAGES.USDC
+              : "");
+
+          return {
+            address: token.id, // Using id as address
+            name: token.name,
+            symbol: token.symbol,
+            decimals: token.decimals,
+            icon: iconUrl,
+            description: token.description || "",
+            metadataType: token.metadataType,
+            balance: tokenBalances[token.id] || "0.0", // Add balance from state
+          };
+        });
 
         // Create object mapping for easy access
         const tokensObj = tokens.reduce((acc, token) => {
@@ -146,10 +221,16 @@ export default function SwapTokenModal({
           )
         );
         setTokenObj(tokensObj);
+        setTokenList(
+          tokens.filter(
+            (token) =>
+              token.address?.toLowerCase() !== selectedAddr?.toLowerCase()
+          )
+        );
       } else {
         toast({
           title: t("common.error"),
-          description: t("common.not_found_token"),
+          description: t("toast.failed_to_load_tokens"),
           status: "error",
           duration: 3000,
           isClosable: true,
@@ -159,7 +240,7 @@ export default function SwapTokenModal({
       console.error("Error fetching token list:", error);
       toast({
         title: t("common.error"),
-        description: t("common.not_found_token"),
+        description: t("toast.failed_to_load_tokens"),
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -167,29 +248,51 @@ export default function SwapTokenModal({
     } finally {
       setLoading(false);
     }
-  }, [selectedAddr, t, toast]);
+  }, [selectedAddr, t, toast, tokenBalances]);
 
-  // Get token data for a specific address
-  const getTokenData = useCallback(async (address) => {
-    try {
-      const response = await axios.get(
-        `https://aftermath.finance/api/tokens/${address}`
-      );
+  // Get token data for a specific ID
+  const getTokenData = useCallback(
+    async (id) => {
+      try {
+        const existingToken = tokenObj[id];
+        if (existingToken) {
+          return existingToken;
+        }
 
-      if (response.data) {
-        return {
-          address: response.data.address,
-          name: response.data.name,
-          symbol: response.data.symbol,
-          decimals: response.data.decimals,
-          icon: response.data.logoURI || "",
-        };
+        const response = await axios.post(
+          "https://aftermath.finance/api/coins/metadata"
+        );
+        const token = response.data.find(
+          (t) => t.id.toLowerCase() === id.toLowerCase()
+        );
+
+        if (token) {
+          const iconUrl =
+            token.iconUrl ||
+            (token.symbol === "SUI"
+              ? DEFAULT_TOKEN_IMAGES.SUI
+              : token.symbol === "USDC"
+              ? DEFAULT_TOKEN_IMAGES.USDC
+              : "");
+
+          return {
+            address: token.id,
+            name: token.name,
+            symbol: token.symbol,
+            decimals: token.decimals,
+            icon: iconUrl,
+            description: token.description || "",
+            metadataType: token.metadataType,
+            balance: tokenBalances[token.id] || "0.0",
+          };
+        }
+        throw new Error("Token not found");
+      } catch (error) {
+        throw new Error("Token not found");
       }
-      throw new Error("Token not found");
-    } catch (error) {
-      throw new Error("Token not found");
-    }
-  }, []);
+    },
+    [tokenObj, tokenBalances]
+  );
 
   const handleSearchToken = useCallback((e) => {
     setTokenSearch(e.target.value);
@@ -204,7 +307,7 @@ export default function SwapTokenModal({
         setTokenMsg("");
       } catch (e) {
         setTokenInfo(emptyToken);
-        setTokenMsg(t(`common.not_found_token`));
+        setTokenMsg(t(`toast.not_found_token`));
       } finally {
         setLoadingSearchToken(false);
       }
@@ -212,12 +315,13 @@ export default function SwapTokenModal({
     [getTokenData, t]
   );
 
-  // Load tokens on initial render
+  // Load tokens and balances on initial render
   useEffect(() => {
     if (isOpen) {
+      fetchTokenBalances();
       fetchTokenList();
     }
-  }, [fetchTokenList, isOpen]);
+  }, [fetchTokenList, fetchTokenBalances, isOpen]);
 
   // Filter tokens based on search
   useEffect(() => {
@@ -225,10 +329,10 @@ export default function SwapTokenModal({
       let searchValue = tokenSearch.replace(/\s+/g, "");
       let searchLower = searchValue.toLowerCase();
 
-      const isValidAddress =
-        searchValue.length === 42 && searchValue.substring(0, 2) === "0x";
+      const isValidId =
+        searchValue.length === 66 && searchValue.substring(0, 2) === "0x";
 
-      if (!isValidAddress) {
+      if (!isValidId) {
         let searchTokens = defaultTokenList.filter(
           (item) =>
             item.address.toLowerCase().includes(searchLower) ||
@@ -259,6 +363,17 @@ export default function SwapTokenModal({
     setTokenSearch("");
     setTokenMsg("");
   }, [onClose]);
+
+  // Format balance with proper decimals
+  const formatBalance = (balance, decimals) => {
+    if (!balance) return "0.00";
+
+    // Parse balance as float
+    const numBalance = parseFloat(balance);
+
+    // Display with appropriate decimal places based on token type
+    return numBalance.toFixed(decimals === 6 ? 2 : 4);
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={handleCloseModal} isCentered>
@@ -382,20 +497,40 @@ export default function SwapTokenModal({
                     />
                   }
                   h="max"
-                  onClick={() => {
-                    handleChoseToken(tokenInfo);
-                    onClose();
-                  }}
+                  onClick={() => handleTokenSelection(tokenInfo)}
                 >
-                  <VStack align="start">
-                    <Text>{tokenInfo.symbol}</Text>
-                    <Text
-                      fontWeight={"400"}
-                      fontSize={"14px"}
-                      color={"rgba(255, 255, 255, 0.6)"}
+                  <VStack align="start" width="100%">
+                    <Flex
+                      width="100%"
+                      justifyContent="space-between"
+                      alignItems="center"
                     >
-                      {tokenInfo.name}
-                    </Text>
+                      <Text>{tokenInfo.symbol}</Text>
+                      <Text color="#40ff9f">
+                        {formatBalance(tokenInfo.balance, tokenInfo.decimals)}
+                      </Text>
+                    </Flex>
+                    <Flex
+                      width="100%"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Text
+                        fontWeight={"400"}
+                        fontSize={"14px"}
+                        color={"rgba(255, 255, 255, 0.6)"}
+                      >
+                        {tokenInfo.name}
+                      </Text>
+                      {tokenInfo.description && (
+                        <Tooltip label={tokenInfo.description} placement="top">
+                          <InfoIcon
+                            color="rgba(255, 255, 255, 0.6)"
+                            boxSize={4}
+                          />
+                        </Tooltip>
+                      )}
+                    </Flex>
                   </VStack>
                 </Button>
               )}
@@ -440,26 +575,46 @@ export default function SwapTokenModal({
                           />
                         }
                         h="max"
-                        onClick={() => {
-                          handleChoseToken(item);
-                          onClose();
-                        }}
+                        onClick={() => handleTokenSelection(item)}
                       >
-                        <VStack align="start" color={"#000"}>
-                          <Text
-                            fontWeight={"500"}
-                            fontSize={"16px"}
-                            color={"#fff"}
+                        <VStack align="start" width="100%">
+                          <Flex
+                            width="100%"
+                            justifyContent="space-between"
+                            alignItems="center"
                           >
-                            {item.symbol}
-                          </Text>
-                          <Text
-                            fontWeight={"400"}
-                            fontSize={"14px"}
-                            color={"rgba(255, 255, 255, 0.6)"}
+                            <Text
+                              fontWeight={"500"}
+                              fontSize={"16px"}
+                              color={"#fff"}
+                            >
+                              {item.symbol}
+                            </Text>
+                            <Text color="#40ff9f">
+                              {formatBalance(item.balance, item.decimals)}
+                            </Text>
+                          </Flex>
+                          <Flex
+                            width="100%"
+                            justifyContent="space-between"
+                            alignItems="center"
                           >
-                            {item.name}
-                          </Text>
+                            <Text
+                              fontWeight={"400"}
+                              fontSize={"14px"}
+                              color={"rgba(255, 255, 255, 0.6)"}
+                            >
+                              {item.name}
+                            </Text>
+                            {item.description && (
+                              <Tooltip label={item.description} placement="top">
+                                <InfoIcon
+                                  color="rgba(255, 255, 255, 0.6)"
+                                  boxSize={4}
+                                />
+                              </Tooltip>
+                            )}
+                          </Flex>
                         </VStack>
                       </Button>
                     ))

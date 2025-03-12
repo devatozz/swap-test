@@ -25,13 +25,24 @@ const Swap = () => {
   const [tokenIn, setTokenIn] = useState(emptyToken);
   const [tokenOut, setTokenOut] = useState(emptyToken);
 
+  const {
+    isOpen: openTokenIn,
+    onOpen: openTokenInModal,
+    onClose: closeTokenIn,
+  } = useDisclosure();
+
+  const {
+    isOpen: openTokenOut,
+    onOpen: openTokenOutModal,
+    onClose: closeTokenOut,
+  } = useDisclosure();
+
   const handleSetAmountIn = useCallback(
     (value) => {
       const sanitizedValue = value.replace(/,/g, ".");
       const amount = formatInputAmount(sanitizedValue);
       setAmountIn(amount);
 
-      // Clear output and calculations if input is empty or 0
       if (!amount || amount === "0") {
         setAmountOut("0");
         return;
@@ -39,13 +50,29 @@ const Swap = () => {
     },
     [tokenIn, tokenOut]
   );
-  const handleSetMaxTokenIn = useCallback(() => {}, [tokenIn, tokenOut]);
-  const {
-    isOpen: openTokenIn,
-    onToggle: toggleTokenIn,
-    onClose: closeTokenIn,
-  } = useDisclosure();
-  const handleSelectTokenIn = useCallback([tokenOut, tokenIn, amountIn]);
+
+  const handleSetMaxTokenIn = useCallback(() => {
+    if (tokenIn.balance) {
+      setAmountIn(tokenIn.balance);
+    }
+  }, [tokenIn]);
+
+  const handleSelectTokenIn = useCallback(
+    (token) => {
+      setTokenIn(token);
+      closeTokenIn();
+    },
+    [closeTokenIn]
+  );
+
+  const handleSelectTokenOut = useCallback(
+    (token) => {
+      setTokenOut(token);
+      closeTokenOut();
+    },
+    [closeTokenOut]
+  );
+
   return (
     <Center
       bg="transparent"
@@ -55,7 +82,7 @@ const Swap = () => {
       mt={"60px"}
       flexDirection="column"
       px={4}
-      color={"red"}
+      color={"#fff"}
     >
       <Box>
         <Box
@@ -79,13 +106,6 @@ const Swap = () => {
             padding={"12px"}
           >
             <Flex gap={6} flexDirection={"column"} mt={2}>
-              <SwapTokenModal
-                isOpen={openTokenIn}
-                onClose={closeTokenIn}
-                handleChoseToken={handleSelectTokenIn}
-                selectedAddr={tokenIn.address}
-              />
-
               <InputGroup justifyContent={"space-between"}>
                 <Input
                   value={amountIn === "0" ? "" : amountIn}
@@ -150,14 +170,14 @@ const Swap = () => {
                     border={"none"}
                     outline={"none"}
                     justifyContent="right"
-                    minW="110px"
+                    minW="60px"
                     variant="outline"
                     color={"#fff"}
                     aria-label="Options token in"
                     background={"transparent"}
                     _hover={{ background: "transparent" }}
                     padding={"0px"}
-                    onClick={toggleTokenIn}
+                    onClick={openTokenInModal}
                     fontSize={{ base: "16px", md: "20px" }}
                     fontWeight={"700"}
                     lineHeight={"28px"}
@@ -187,9 +207,107 @@ const Swap = () => {
             width={"100%"}
             height={"150px"}
             borderRadius={"12px"}
-          ></Box>
+            padding={"12px"}
+          >
+            <Flex gap={6} flexDirection={"column"} mt={2}>
+              <InputGroup justifyContent={"space-between"}>
+                <Input
+                  value={amountOut === "0" ? "" : amountOut}
+                  placeholder="0.00"
+                  border="none"
+                  outline="none"
+                  isReadOnly
+                  _placeholder={{
+                    color: "rgba(255, 255, 255, 0.4)",
+                  }}
+                  fontSize={{ base: "16px", md: "20px" }}
+                  fontWeight="700"
+                  lineHeight="30px"
+                  padding="0px"
+                  autoComplete="off"
+                  fontFamily="Lexend"
+                  _focus={{
+                    boxShadow: "none",
+                    border: "none",
+                    outline: "none",
+                  }}
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                />
+
+                <Box
+                  position={"relative"}
+                  display={"flex"}
+                  alignItems={"center"}
+                  justifyContent={"end"}
+                  gap={"10px"}
+                >
+                  <Button
+                    border={"none"}
+                    outline={"none"}
+                    justifyContent="right"
+                    minW="60px"
+                    variant="outline"
+                    color={"#fff"}
+                    aria-label="Options token out"
+                    background={"transparent"}
+                    _hover={{ background: "transparent" }}
+                    padding={"0px"}
+                    onClick={openTokenOutModal}
+                    fontSize={{ base: "16px", md: "20px" }}
+                    fontWeight={"700"}
+                    lineHeight={"28px"}
+                    fontFamily={"Lexend"}
+                    leftIcon={
+                      <TokenAvatar
+                        size="24px"
+                        name={tokenOut.symbol ? tokenOut.symbol : "Out"}
+                        icon={tokenOut?.icon}
+                      />
+                    }
+                  >
+                    <Text>
+                      {tokenOut.symbol ? tokenOut.symbol : t(`common.select`)}
+                    </Text>
+                  </Button>
+                </Box>
+              </InputGroup>
+            </Flex>
+          </Box>
+
+          <Button
+            width="100%"
+            height="48px"
+            borderRadius="12px"
+            bg="linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"
+            _hover={{
+              boxShadow:
+                "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
+              background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
+            }}
+            isDisabled={!tokenIn.symbol || !tokenOut.symbol || amountIn === "0"}
+          >
+            {t("common.swap")}
+          </Button>
         </Box>
       </Box>
+
+      <SwapTokenModal
+        isOpen={openTokenIn}
+        onClose={closeTokenIn}
+        handleChoseToken={handleSelectTokenIn}
+        selectedAddr={tokenIn.address}
+      />
+
+      <SwapTokenModal
+        isOpen={openTokenOut}
+        onClose={closeTokenOut}
+        handleChoseToken={handleSelectTokenOut}
+        selectedAddr={tokenOut.address}
+      />
     </Center>
   );
 };
