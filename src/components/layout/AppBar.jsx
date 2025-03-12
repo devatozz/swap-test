@@ -32,7 +32,6 @@ import NextLink from "next/link";
 import { useRouter } from "next/router";
 import styled from "styled-components";
 import Network from "./Network";
-import Image from "next/image";
 import { ImageLanguageSwitcher } from "../Language/Switcher";
 import { AthenButton } from "../Button/AthenButton";
 import { useLanguage } from "src/contexts/LanguageContext";
