@@ -78,12 +78,12 @@ const Swap = () => {
             borderRadius={"12px"}
           >
             <Flex gap={6} flexDirection={"column"} mt={2}>
-              {/* <SwapTokenModal
+              <SwapTokenModal
                 isOpen={openTokenIn}
                 onClose={closeTokenIn}
                 handleChoseToken={handleSelectTokenIn}
                 selectedAddr={tokenIn.address}
-              /> */}
+              />
 
               <InputGroup justifyContent={"space-between"}>
                 <Input

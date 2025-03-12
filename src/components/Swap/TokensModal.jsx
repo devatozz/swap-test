@@ -18,6 +18,7 @@ import {
   FormErrorMessage,
   Box,
   Spinner,
+  useToast,
 } from "@chakra-ui/react";
 
 import { SearchIcon } from "@chakra-ui/icons";
@@ -26,6 +27,8 @@ import { emptyToken } from "src/utils/utils";
 import styled from "styled-components";
 import TokenAvatar from "./TokenAvatar";
 import { useLanguage } from "src/contexts/LanguageContext";
+import axios from "axios";
+
 export const BREAKPOINTS = {
   xs: 396,
   sm: 640,
@@ -35,6 +38,7 @@ export const BREAKPOINTS = {
   xxl: 1536,
   xxxl: 1920,
 };
+
 const WrapperBox = styled.div`
   position: relative;
   border-radius: 12px;
@@ -85,6 +89,7 @@ const WrapperBox = styled.div`
     margin: 0px auto;
   }
 `;
+
 const TitleText = styled.span`
   color: #fff;
   font-size: 20px;
@@ -92,6 +97,7 @@ const TitleText = styled.span`
   font-weight: 700;
   line-height: 140%; /* 28px */
 `;
+
 export default function SwapTokenModal({
   handleChoseToken,
   isOpen,
@@ -99,45 +105,121 @@ export default function SwapTokenModal({
   selectedAddr,
 }) {
   const { t } = useLanguage();
+  const toast = useToast();
 
-  const { list, loaded, obj } = useSelector((state) => state.forward.tokens);
+  // State management
   const [tokenList, setTokenList] = useState([]);
   const [defaultTokenList, setDefaultTokenList] = useState([]);
-
   const [tokenSearch, setTokenSearch] = useState("");
   const [tokenInfo, setTokenInfo] = useState(emptyToken);
   const [tokenMsg, setTokenMsg] = useState("");
   const [loadingSearchToken, setLoadingSearchToken] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [tokenObj, setTokenObj] = useState({});
+
+  // Fetch token list from Aftermath API
+  const fetchTokenList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get("https://aftermath.finance/api/tokens");
+
+      if (response.data && Array.isArray(response.data)) {
+        // Create token list and object mapping
+        const tokens = response.data.map((token) => ({
+          address: token.address,
+          name: token.name,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          icon: token.logoURI || "",
+        }));
+
+        // Create object mapping for easy access
+        const tokensObj = tokens.reduce((acc, token) => {
+          acc[token.address] = token;
+          return acc;
+        }, {});
+
+        setDefaultTokenList(
+          tokens.filter(
+            (token) =>
+              token.address?.toLowerCase() !== selectedAddr?.toLowerCase()
+          )
+        );
+        setTokenObj(tokensObj);
+      } else {
+        toast({
+          title: t("common.error"),
+          description: t("common.not_found_token"),
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching token list:", error);
+      toast({
+        title: t("common.error"),
+        description: t("common.not_found_token"),
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedAddr, t, toast]);
+
+  // Get token data for a specific address
+  const getTokenData = useCallback(async (address) => {
+    try {
+      const response = await axios.get(
+        `https://aftermath.finance/api/tokens/${address}`
+      );
+
+      if (response.data) {
+        return {
+          address: response.data.address,
+          name: response.data.name,
+          symbol: response.data.symbol,
+          decimals: response.data.decimals,
+          icon: response.data.logoURI || "",
+        };
+      }
+      throw new Error("Token not found");
+    } catch (error) {
+      throw new Error("Token not found");
+    }
+  }, []);
 
   const handleSearchToken = useCallback((e) => {
     setTokenSearch(e.target.value);
   }, []);
 
-  const handleGetTokenInfo = useCallback(async (value) => {
-    setLoadingSearchToken(true);
-    try {
-      const tokenFetch = await getTokenData(value);
-      setTokenInfo({ ...tokenFetch, disable: false, icon: "" });
-      setTokenMsg("");
-      setLoadingSearchToken(false);
-    } catch (e) {
-      setTokenInfo(emptyToken);
-      setTokenMsg(t(`toast.not_found_token`));
-      setLoadingSearchToken(false);
-    }
-  }, []);
+  const handleGetTokenInfo = useCallback(
+    async (value) => {
+      setLoadingSearchToken(true);
+      try {
+        const tokenFetch = await getTokenData(value);
+        setTokenInfo({ ...tokenFetch, disable: false });
+        setTokenMsg("");
+      } catch (e) {
+        setTokenInfo(emptyToken);
+        setTokenMsg(t(`common.not_found_token`));
+      } finally {
+        setLoadingSearchToken(false);
+      }
+    },
+    [getTokenData, t]
+  );
 
+  // Load tokens on initial render
   useEffect(() => {
-    if (loaded) {
-      setDefaultTokenList(
-        list.filter(
-          (fItem) =>
-            fItem.address?.toLowerCase() !== selectedAddr?.toLowerCase()
-        )
-      );
+    if (isOpen) {
+      fetchTokenList();
     }
-  }, [loaded, selectedAddr]);
+  }, [fetchTokenList, isOpen]);
 
+  // Filter tokens based on search
   useEffect(() => {
     if (defaultTokenList.length && tokenSearch !== "") {
       let searchValue = tokenSearch.replace(/\s+/g, "");
@@ -170,7 +252,7 @@ export default function SwapTokenModal({
       setTokenInfo(emptyToken);
       setTokenMsg("");
     }
-  }, [defaultTokenList, tokenSearch]);
+  }, [defaultTokenList, tokenSearch, handleGetTokenInfo, t]);
 
   const handleCloseModal = useCallback(() => {
     onClose();
@@ -260,11 +342,22 @@ export default function SwapTokenModal({
                   <FormErrorMessage>{tokenMsg}</FormErrorMessage>
                 </Box>
               </FormControl>
+
+              {loading && (
+                <Box mt={"20px"} textAlign="center" width="100%">
+                  <Spinner color="#40ff9f" size="lg" />
+                  <Text color="#40ff9f" mt={2}>
+                    {t("common.loading_tokens")}
+                  </Text>
+                </Box>
+              )}
+
               {loadingSearchToken && (
                 <Box mt={"20px"} color={"#40ff9f"}>
                   {t(`common.searching`)}
                 </Box>
               )}
+
               {tokenInfo.address !== "" && (
                 <Button
                   w="full"
@@ -281,7 +374,13 @@ export default function SwapTokenModal({
                   }}
                   key={`token-option-${tokenInfo.address}`}
                   py={2}
-                  leftIcon={<Avatar size="xs" name={tokenInfo.symbol} />}
+                  leftIcon={
+                    <TokenAvatar
+                      size="32px"
+                      name={tokenInfo.symbol}
+                      icon={tokenInfo.icon}
+                    />
+                  }
                   h="max"
                   onClick={() => {
                     handleChoseToken(tokenInfo);
@@ -317,65 +416,65 @@ export default function SwapTokenModal({
                   },
                 }}
               >
-                {tokenList.length > 0 || tokenInfo ? (
-                  tokenList.map((item, index) => (
-                    <Button
-                      w="full"
-                      bg={"transparent"}
-                      justifyContent="left"
-                      isDisabled={item?.disable}
-                      minHeight={"60px"}
-                      marginTop={"10px"}
-                      key={`token-option-${index}`}
-                      border={"1px solid rgba(255, 255, 255, 0.1)"}
-                      borderRadius={"8px"}
-                      _hover={{
-                        bg: "transparent",
-                        borderColor: "#78ffb6",
-                      }}
-                      leftIcon={
-                        <TokenAvatar
-                          size="32px"
-                          name={item.symbol}
-                          icon={obj[item.address]?.icon}
-                        />
-                      }
-                      h="max"
-                      onClick={() => {
-                        handleChoseToken(item);
-                        onClose();
-                      }}
-                    >
-                      <VStack align="start" color={"#000"}>
+                {!loading && tokenList.length > 0
+                  ? tokenList.map((item, index) => (
+                      <Button
+                        w="full"
+                        bg={"transparent"}
+                        justifyContent="left"
+                        isDisabled={item?.disable}
+                        minHeight={"60px"}
+                        marginTop={"10px"}
+                        key={`token-option-${index}`}
+                        border={"1px solid rgba(255, 255, 255, 0.1)"}
+                        borderRadius={"8px"}
+                        _hover={{
+                          bg: "transparent",
+                          borderColor: "#78ffb6",
+                        }}
+                        leftIcon={
+                          <TokenAvatar
+                            size="32px"
+                            name={item.symbol}
+                            icon={item.icon}
+                          />
+                        }
+                        h="max"
+                        onClick={() => {
+                          handleChoseToken(item);
+                          onClose();
+                        }}
+                      >
+                        <VStack align="start" color={"#000"}>
+                          <Text
+                            fontWeight={"500"}
+                            fontSize={"16px"}
+                            color={"#fff"}
+                          >
+                            {item.symbol}
+                          </Text>
+                          <Text
+                            fontWeight={"400"}
+                            fontSize={"14px"}
+                            color={"rgba(255, 255, 255, 0.6)"}
+                          >
+                            {item.name}
+                          </Text>
+                        </VStack>
+                      </Button>
+                    ))
+                  : !loading && (
+                      <Box>
                         <Text
-                          fontWeight={"500"}
-                          fontSize={"16px"}
                           color={"#fff"}
+                          fontSize={"16px"}
+                          textAlign={"center"}
+                          mt={"30px"}
                         >
-                          {obj[item.address]?.symbol}
+                          {t("common.token_not_found")}
                         </Text>
-                        <Text
-                          fontWeight={"400"}
-                          fontSize={"14px"}
-                          color={"rgba(255, 255, 255, 0.6)"}
-                        >
-                          {obj[item.address]?.name}
-                        </Text>
-                      </VStack>
-                    </Button>
-                  ))
-                ) : (
-                  <Box>
-                    <Text
-                      color={"#fff"}
-                      fontSize={"16px"}
-                      textAlign={"center"}
-                      mt={"30px"}
-                    >
-                      {t("common.token_not_found")}
-                    </Text>
-                  </Box>
-                )}
+                      </Box>
+                    )}
               </Box>
             </VStack>
           </ModalBody>
