@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import SlippageSetting from "./SlippageSetting";
 import {
@@ -37,6 +37,12 @@ const Swap = () => {
     onClose: closeTokenOut,
   } = useDisclosure();
 
+  const [tokenInBalance, setTokenInBalance] = useState("0");
+  const [tokenOutBalance, setTokenOutBalance] = useState("0");
+  const [tokenInValue, setTokenInValue] = useState("0");
+  const [tokenOutValue, setTokenOutValue] = useState("0");
+  const [loading, setLoading] = useState(false);
+
   const handleSetAmountIn = useCallback(
     (value) => {
       const sanitizedValue = value.replace(/,/g, ".");
@@ -57,20 +63,57 @@ const Swap = () => {
     }
   }, [tokenIn]);
 
+  const fetchTokenPrice = useCallback(
+    async (tokenSymbol, balanceSetter, valueSetter) => {
+      try {
+        const response = await axios.post(
+          "https://aftermath.finance/api/price-info",
+          {
+            coins: [tokenSymbol],
+          }
+        );
+        const prices = response.data;
+        const tokenPrice = prices[tokenSymbol]?.price;
+
+        const balance = await getTokenBalance(tokenSymbol);
+        balanceSetter(balance);
+        valueSetter((parseFloat(balance) * tokenPrice).toFixed(2));
+      } catch (error) {
+        console.error("Error fetching token price:", error);
+      }
+    },
+    []
+  );
+
+  const getTokenBalance = async (tokenSymbol) => {
+    const balance = "100";
+    return balance;
+  };
+
   const handleSelectTokenIn = useCallback(
-    (token) => {
+    async (token) => {
       setTokenIn(token);
+      await fetchTokenPrice(
+        "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+        setTokenInBalance,
+        setTokenInValue
+      );
       closeTokenIn();
     },
-    [closeTokenIn]
+    [fetchTokenPrice, closeTokenIn]
   );
 
   const handleSelectTokenOut = useCallback(
-    (token) => {
+    async (token) => {
       setTokenOut(token);
+      await fetchTokenPrice(
+        "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+        setTokenOutBalance,
+        setTokenOutValue
+      );
       closeTokenOut();
     },
-    [closeTokenOut]
+    [fetchTokenPrice, closeTokenOut]
   );
 
   return (
@@ -277,6 +320,15 @@ const Swap = () => {
               </InputGroup>
             </Flex>
           </Box>
+
+          <Text color={"#fff"} fontSize={"14px"}>
+            Token In Balance: {tokenInBalance} (Estimated Value: ${tokenInValue}
+            )
+          </Text>
+          <Text color={"#fff"} fontSize={"14px"}>
+            Token Out Balance: {tokenOutBalance} (Estimated Value: $
+            {tokenOutValue})
+          </Text>
 
           <Button
             width="100%"
