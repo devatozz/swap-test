@@ -433,7 +433,7 @@ const Swap = () => {
             <Box>
               <Text color={"#fff"} fontSize={"14px"}>
                 Rate: 1 {tokenIn.symbol} ={" "}
-                {exchangeRate ? formatValue(1 / exchangeRate) : "0"}{" "}
+                {exchangeRate ? formatValue(exchangeRate) : "0"}{" "}
                 {tokenOut.symbol}
               </Text>
             </Box>
@@ -463,14 +463,14 @@ const Swap = () => {
         isOpen={openTokenIn}
         onClose={closeTokenIn}
         handleChoseToken={handleSelectTokenIn}
-        selectedAddr={tokenOut.address} // Prevent selecting the same token
+        selectedAddr={tokenOut.address}
       />
 
       <SwapTokenModal
         isOpen={openTokenOut}
         onClose={closeTokenOut}
         handleChoseToken={handleSelectTokenOut}
-        selectedAddr={tokenIn.address} // Prevent selecting the same token
+        selectedAddr={tokenIn.address}
       />
     </Center>
   );
