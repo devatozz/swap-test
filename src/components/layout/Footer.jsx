@@ -23,7 +23,7 @@ export const BREAKPOINTS = {
   xxxl: 1920,
 };
 const FooterWrapper = styled.div`
-  background: linear-gradient(to top, #012e1d, rgba(0, 0, 0, 0.9));
+  background: #101010;
   color: white;
   background-size: cover;
   background-position: center;
@@ -91,60 +91,6 @@ const FooterLeft = styled.div`
   @media screen and (max-width: ${BREAKPOINTS.md}px) {
     text-align: center;
     align-items: center;
-  }
-`;
-
-const FooterGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  @media screen and (max-width: ${BREAKPOINTS.md}px) {
-    & > :first-child {
-      grid-column: span 2;
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    & > :last-child {
-      grid-column: span 1;
-    }
-  }
-`;
-
-const FooterColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-
-  a {
-    font-weight: 500;
-    font-size: 1rem;
-  }
-`;
-
-const FooterEarn = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  cursor: pointer;
-
-  span {
-    display: flex;
-    align-items: center;
-  }
-`;
-
-const FooterDropdown = styled.div`
-  display: ${(props) => (props.isOpen ? "flex" : "none")};
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-
-  a {
-    font-weight: 300;
-    font-size: 0.875rem;
   }
 `;
 

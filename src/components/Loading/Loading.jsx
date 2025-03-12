@@ -8,7 +8,7 @@ const Wrapper = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #05201b;
+  background-color: #101010;
   display: flex;
   justify-content: center;
   align-items: center;
