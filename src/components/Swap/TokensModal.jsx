@@ -125,7 +125,6 @@ export default function SwapTokenModal({
   const [loadingSearchToken, setLoadingSearchToken] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tokenObj, setTokenObj] = useState({});
-  const [tokenBalances, setTokenBalances] = useState({});
 
   const handleTokenSelection = useCallback(
     (token) => {
@@ -140,40 +139,6 @@ export default function SwapTokenModal({
     },
     [handleChoseToken, onSelectToken, onClose]
   );
-
-  // Function to fetch token balances
-  const fetchTokenBalances = useCallback(async () => {
-    if (!wallet) return;
-    console.log("data", wallet.address);
-    try {
-      const response = await axios.post(
-        `https://aftermath.finance/api/wallet/${wallet}/balances/coins`,
-        {
-          coins: [
-            "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
-            "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
-          ],
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      // Assuming API response is in format { balances: { coin_id: amount } }
-      setTokenBalances(data.balances || {});
-    } catch (error) {
-      console.error("Error fetching token balances:", error);
-    }
-  }, [wallet]);
 
   // Fetch token list from Aftermath API
   const fetchTokenList = useCallback(async () => {
@@ -215,7 +180,6 @@ export default function SwapTokenModal({
             icon: iconUrl,
             description: token.description || "",
             metadataType: token.metadataType,
-            balance: tokenBalances[token.id] || "0.0", // Add balance from state
           };
         });
 
@@ -259,7 +223,7 @@ export default function SwapTokenModal({
     } finally {
       setLoading(false);
     }
-  }, [selectedAddr, t, toast, tokenBalances]);
+  }, [selectedAddr, t, toast]);
 
   // Get token data for a specific ID
   const getTokenData = useCallback(
@@ -294,7 +258,6 @@ export default function SwapTokenModal({
             icon: iconUrl,
             description: token.description || "",
             metadataType: token.metadataType,
-            balance: tokenBalances[token.id] || "0.0",
           };
         }
         throw new Error("Token not found");
@@ -302,7 +265,7 @@ export default function SwapTokenModal({
         throw new Error("Token not found");
       }
     },
-    [tokenObj, tokenBalances]
+    [tokenObj]
   );
 
   const handleSearchToken = useCallback((e) => {
@@ -329,10 +292,9 @@ export default function SwapTokenModal({
   // Load tokens and balances on initial render
   useEffect(() => {
     if (isOpen) {
-      fetchTokenBalances();
       fetchTokenList();
     }
-  }, [fetchTokenList, fetchTokenBalances, isOpen]);
+  }, [fetchTokenList, isOpen]);
 
   // Filter tokens based on search
   useEffect(() => {
@@ -600,9 +562,6 @@ export default function SwapTokenModal({
                               color={"#fff"}
                             >
                               {item.symbol}
-                            </Text>
-                            <Text color="#40ff9f">
-                              {formatBalance(item.balance, item.decimals)}
                             </Text>
                           </Flex>
                           <Flex

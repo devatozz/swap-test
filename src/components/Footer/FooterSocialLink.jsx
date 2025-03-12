@@ -116,9 +116,9 @@ const FooterSocialLinks = () => {
 
   return (
     <WrapperLink>
-      {links?.map(({ link, icon, text }) => (
+      {links?.map(({ link, icon, text }, index) => (
         <SocialIconWrapper
-          key={link}
+          key={index}
           href={link}
           target="_blank"
           rel="noopener noreferrer"

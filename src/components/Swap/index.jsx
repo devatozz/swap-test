@@ -300,7 +300,6 @@ const Swap = () => {
         onClose={closeTokenIn}
         handleChoseToken={handleSelectTokenIn}
         selectedAddr={tokenIn.address}
-        wallet={currentAccount?.address}
       />
 
       <SwapTokenModal
@@ -308,7 +307,6 @@ const Swap = () => {
         onClose={closeTokenOut}
         handleChoseToken={handleSelectTokenOut}
         selectedAddr={tokenOut.address}
-        wallet={currentAccount?.address}
       />
     </Center>
   );
