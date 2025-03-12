@@ -17,14 +17,14 @@ import { emptyToken } from "src/utils/utils";
 import SwapTokenModal from "./TokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
-
+import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
 const Swap = () => {
   const { t } = useLanguage();
   const [amountIn, setAmountIn] = useState("0");
   const [amountOut, setAmountOut] = useState("0");
   const [tokenIn, setTokenIn] = useState(emptyToken);
   const [tokenOut, setTokenOut] = useState(emptyToken);
-
+  const currentAccount = useCurrentAccount();
   const {
     isOpen: openTokenIn,
     onOpen: openTokenInModal,
@@ -300,6 +300,7 @@ const Swap = () => {
         onClose={closeTokenIn}
         handleChoseToken={handleSelectTokenIn}
         selectedAddr={tokenIn.address}
+        wallet={currentAccount?.address}
       />
 
       <SwapTokenModal
@@ -307,6 +308,7 @@ const Swap = () => {
         onClose={closeTokenOut}
         handleChoseToken={handleSelectTokenOut}
         selectedAddr={tokenOut.address}
+        wallet={currentAccount?.address}
       />
     </Center>
   );

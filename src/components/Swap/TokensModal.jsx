@@ -107,16 +107,15 @@ const DEFAULT_TOKEN_IMAGES = {
 };
 
 export default function SwapTokenModal({
-  handleChoseToken = null, // Add default value to prevent errors
+  handleChoseToken = null,
   isOpen,
   onClose,
   selectedAddr,
-  wallet, // Add wallet prop to get balances
-  onSelectToken, // Add alternative prop for token selection callback
+  wallet,
+  onSelectToken,
 }) {
   const { t } = useLanguage();
   const toast = useToast();
-
   // State management
   const [tokenList, setTokenList] = useState([]);
   const [defaultTokenList, setDefaultTokenList] = useState([]);
@@ -128,7 +127,6 @@ export default function SwapTokenModal({
   const [tokenObj, setTokenObj] = useState({});
   const [tokenBalances, setTokenBalances] = useState({});
 
-  // Handle token selection with fallback to onSelectToken if handleChoseToken is not provided
   const handleTokenSelection = useCallback(
     (token) => {
       if (typeof handleChoseToken === "function") {
@@ -145,20 +143,33 @@ export default function SwapTokenModal({
 
   // Function to fetch token balances
   const fetchTokenBalances = useCallback(async () => {
-    if (!wallet || !wallet.address) return;
-
+    if (!wallet) return;
+    console.log("data", wallet.address);
     try {
-      // This is a placeholder. You'll need to replace this with your actual balance fetching logic
-      // For example, using your wallet provider's API
-      const balances = {
-        // Replace these with your actual token IDs from the API response
-        "0x9258181f5ceac8dbffb7030890243caed69a9599d2886d957a9cb7656af3bdb3":
-          "10.5", // SUI
-        "0x69b7a7c3c200439c1b5f3b19d7d495d5966d5f08de66c69276152f8db3992ec6":
-          "100.0", // USDC
-      };
+      const response = await axios.post(
+        `https://aftermath.finance/api/wallet/${wallet}/balances/coins`,
+        {
+          coins: [
+            "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+            "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+          ],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
 
-      setTokenBalances(balances);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Assuming API response is in format { balances: { coin_id: amount } }
+      setTokenBalances(data.balances || {});
     } catch (error) {
       console.error("Error fetching token balances:", error);
     }
