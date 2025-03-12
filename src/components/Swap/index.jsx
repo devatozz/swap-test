@@ -76,6 +76,7 @@ const Swap = () => {
             width={"100%"}
             height={"150px"}
             borderRadius={"12px"}
+            padding={"12px"}
           >
             <Flex gap={6} flexDirection={"column"} mt={2}>
               <SwapTokenModal
@@ -125,7 +126,6 @@ const Swap = () => {
                   alignItems={"center"}
                   justifyContent={"end"}
                   gap={"10px"}
-                  ml={"5px"}
                 >
                   <Button
                     minWidth={{ md: "53px", base: "48px" }}
