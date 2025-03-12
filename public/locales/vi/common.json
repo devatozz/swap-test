@@ -4,6 +4,8 @@
   },
   "common": {
     "connect-wallet": "Kết nối ví",
-    "text_footer_slogan": "Giao dịch nhanh với MINTEST"
+    "text_footer_slogan": "Giao dịch nhanh với MINTEST",
+    "max": "Max",
+    "select": "Chọn"
   }
 }

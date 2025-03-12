@@ -4,6 +4,8 @@
   },
   "common": {
     "connect-wallet": "Connect Wallet",
-    "text_footer_slogan": "Fast Trade with MINTEST"
+    "text_footer_slogan": "Fast Trade with MINTEST",
+    "max": "Max",
+    "select": "Select"
   }
 }
