@@ -10,6 +10,7 @@ import {
   Input,
   Button,
   useDisclosure,
+  useToast,
 } from "@chakra-ui/react";
 import TokenAvatar from "src/components/swap/TokenAvatar";
 import { currencyFormat, formatInputAmount } from "src/utils/stringUtil";
@@ -18,8 +19,10 @@ import SwapTokenModal from "./TokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
+
 const Swap = () => {
   const { t } = useLanguage();
+  const toast = useToast();
   const [amountIn, setAmountIn] = useState("0");
   const [amountOut, setAmountOut] = useState("0");
   const [tokenIn, setTokenIn] = useState(emptyToken);
@@ -42,7 +45,9 @@ const Swap = () => {
   const [tokenInValue, setTokenInValue] = useState("0");
   const [tokenOutValue, setTokenOutValue] = useState("0");
   const [loading, setLoading] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(null);
 
+  // Handle input amount changes
   const handleSetAmountIn = useCallback(
     (value) => {
       const sanitizedValue = value.replace(/,/g, ".");
@@ -53,51 +58,137 @@ const Swap = () => {
         setAmountOut("0");
         return;
       }
+
+      // Calculate amount out if we have exchange rate
+      if (exchangeRate && tokenIn.address && tokenOut.address) {
+        const calculatedAmountOut = (parseFloat(amount) * exchangeRate).toFixed(
+          6
+        );
+        setAmountOut(calculatedAmountOut);
+      }
     },
-    [tokenIn, tokenOut]
+    [tokenIn, tokenOut, exchangeRate]
   );
 
   const handleSetMaxTokenIn = useCallback(() => {
     if (tokenIn.balance) {
       setAmountIn(tokenIn.balance);
-    }
-  }, [tokenIn]);
 
+      // Calculate amount out if we have exchange rate
+      if (exchangeRate && tokenIn.address && tokenOut.address) {
+        const calculatedAmountOut = (
+          parseFloat(tokenIn.balance) * exchangeRate
+        ).toFixed(6);
+        setAmountOut(calculatedAmountOut);
+      }
+    }
+  }, [tokenIn, exchangeRate, tokenOut]);
+
+  // Fetch token price using the token address
   const fetchTokenPrice = useCallback(
-    async (tokenSymbol, balanceSetter, valueSetter) => {
+    async (token, balanceSetter, valueSetter) => {
+      if (!token || !token.address) return;
+
+      setLoading(true);
       try {
         const response = await axios.post(
           "https://aftermath.finance/api/price-info",
           {
-            coins: [tokenSymbol],
+            coins: [token.address],
           }
         );
-        const prices = response.data;
-        const tokenPrice = prices[tokenSymbol]?.price;
 
-        const balance = await getTokenBalance(tokenSymbol);
+        const prices = response.data;
+        const tokenPrice = prices[token.address]?.price || 0;
+
+        // Get token balance - in a real implementation, you would get this from the wallet
+        const balance = await getTokenBalance(token.symbol);
         balanceSetter(balance);
+
+        // Calculate USD value
         valueSetter((parseFloat(balance) * tokenPrice).toFixed(2));
+
+        return tokenPrice;
       } catch (error) {
-        console.error("Error fetching token price:", error);
+        console.error(`Error fetching price for ${token.symbol}:`, error);
+        toast({
+          title: t("common.error"),
+          description: t("toast.failed_to_load_price"),
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return 0;
+      } finally {
+        setLoading(false);
       }
     },
-    []
+    [t, toast]
   );
 
+  // Mock function to get token balance - in a real implementation, you would get this from the wallet
   const getTokenBalance = async (tokenSymbol) => {
-    const balance = "100";
-    return balance;
+    // This is a mock function - replace with actual wallet integration
+    const mockBalances = {
+      SUI: "10.5",
+      USDC: "100",
+      FISH: "250",
+      JWLCETUS: "5",
+      SUIGGA: "20",
+    };
+
+    return mockBalances[tokenSymbol] || "0";
   };
 
+  // Update exchange rate when tokens change
+  useEffect(() => {
+    const updateExchangeRate = async () => {
+      if (tokenIn.address && tokenOut.address) {
+        try {
+          // Fetch prices for both tokens
+          const priceInPromise = fetchTokenPrice(
+            tokenIn,
+            setTokenInBalance,
+            setTokenInValue
+          );
+          const priceOutPromise = fetchTokenPrice(
+            tokenOut,
+            setTokenOutBalance,
+            setTokenOutValue
+          );
+
+          const [priceIn, priceOut] = await Promise.all([
+            priceInPromise,
+            priceOutPromise,
+          ]);
+
+          // Calculate exchange rate
+          if (priceIn && priceOut && priceIn > 0) {
+            const rate = priceIn / priceOut;
+            setExchangeRate(rate);
+
+            // Update amount out if amount in is set
+            if (amountIn && amountIn !== "0") {
+              const calculatedAmountOut = (parseFloat(amountIn) * rate).toFixed(
+                6
+              );
+              setAmountOut(calculatedAmountOut);
+            }
+          }
+        } catch (error) {
+          console.error("Error updating exchange rate:", error);
+        }
+      }
+    };
+
+    updateExchangeRate();
+  }, [tokenIn, tokenOut, fetchTokenPrice]);
+
+  // Handler for token selection
   const handleSelectTokenIn = useCallback(
     async (token) => {
       setTokenIn(token);
-      await fetchTokenPrice(
-        "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
-        setTokenInBalance,
-        setTokenInValue
-      );
+      await fetchTokenPrice(token, setTokenInBalance, setTokenInValue);
       closeTokenIn();
     },
     [fetchTokenPrice, closeTokenIn]
@@ -106,11 +197,7 @@ const Swap = () => {
   const handleSelectTokenOut = useCallback(
     async (token) => {
       setTokenOut(token);
-      await fetchTokenPrice(
-        "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
-        setTokenOutBalance,
-        setTokenOutValue
-      );
+      await fetchTokenPrice(token, setTokenOutBalance, setTokenOutValue);
       closeTokenOut();
     },
     [fetchTokenPrice, closeTokenOut]
@@ -239,6 +326,11 @@ const Swap = () => {
                   </Button>
                 </Box>
               </InputGroup>
+              {tokenIn.symbol && (
+                <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
+                  Balance: {tokenInBalance} {tokenIn.symbol} (${tokenInValue})
+                </Text>
+              )}
             </Flex>
           </Box>
 
@@ -318,17 +410,24 @@ const Swap = () => {
                   </Button>
                 </Box>
               </InputGroup>
+              {tokenOut.symbol && (
+                <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
+                  Balance: {tokenOutBalance} {tokenOut.symbol} (${tokenOutValue}
+                  )
+                </Text>
+              )}
             </Flex>
           </Box>
 
-          <Text color={"#fff"} fontSize={"14px"}>
-            Token In Balance: {tokenInBalance} (Estimated Value: ${tokenInValue}
-            )
-          </Text>
-          <Text color={"#fff"} fontSize={"14px"}>
-            Token Out Balance: {tokenOutBalance} (Estimated Value: $
-            {tokenOutValue})
-          </Text>
+          {tokenIn.symbol && tokenOut.symbol && (
+            <Box>
+              <Text color={"#fff"} fontSize={"14px"}>
+                Rate: 1 {tokenIn.symbol} ={" "}
+                {exchangeRate ? (1 / exchangeRate).toFixed(6) : "0"}{" "}
+                {tokenOut.symbol}
+              </Text>
+            </Box>
+          )}
 
           <Button
             width="100%"
@@ -340,7 +439,10 @@ const Swap = () => {
                 "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
               background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
             }}
-            isDisabled={!tokenIn.symbol || !tokenOut.symbol || amountIn === "0"}
+            isLoading={loading}
+            isDisabled={
+              !tokenIn.symbol || !tokenOut.symbol || amountIn === "0" || loading
+            }
           >
             {t("common.swap")}
           </Button>
@@ -351,14 +453,14 @@ const Swap = () => {
         isOpen={openTokenIn}
         onClose={closeTokenIn}
         handleChoseToken={handleSelectTokenIn}
-        selectedAddr={tokenIn.address}
+        selectedAddr={tokenOut.address} // Prevent selecting the same token
       />
 
       <SwapTokenModal
         isOpen={openTokenOut}
         onClose={closeTokenOut}
         handleChoseToken={handleSelectTokenOut}
-        selectedAddr={tokenOut.address}
+        selectedAddr={tokenIn.address} // Prevent selecting the same token
       />
     </Center>
   );
