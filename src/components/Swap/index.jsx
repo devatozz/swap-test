@@ -11,6 +11,7 @@ import {
   Button,
   useDisclosure,
   useToast,
+  IconButton,
 } from "@chakra-ui/react";
 import TokenAvatar from "src/components/swap/TokenAvatar";
 import { currencyFormat, formatInputAmount } from "src/utils/stringUtil";
@@ -20,6 +21,8 @@ import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
 import TokenList from "src/constant/tokenlist.json";
+import { FiArrowDown } from "react-icons/fi"; // Import arrow icon for the reverse button
+
 function formatValue(value) {
   if (value >= 1) {
     return parseFloat(value.toFixed(2)); // Keep 2 decimal places for values >= 1
@@ -91,6 +94,52 @@ const Swap = () => {
       }
     }
   }, [tokenIn, exchangeRate, tokenOut]);
+
+  // Add reverse function to swap token in and token out
+  const handleReverseTokens = useCallback(() => {
+    // Save the current values
+    const tempTokenIn = tokenIn;
+    const tempTokenOut = tokenOut;
+    const tempAmountIn = amountIn;
+    const tempAmountOut = amountOut;
+    const tempTokenInBalance = tokenInBalance;
+    const tempTokenOutBalance = tokenOutBalance;
+    const tempTokenInValue = tokenInValue;
+    const tempTokenOutValue = tokenOutValue;
+
+    // Swap tokens
+    setTokenIn(tempTokenOut);
+    setTokenOut(tempTokenIn);
+
+    // Swap balances and values
+    setTokenInBalance(tempTokenOutBalance);
+    setTokenOutBalance(tempTokenInBalance);
+    setTokenInValue(tempTokenOutValue);
+    setTokenOutValue(tempTokenInValue);
+
+    // Swap amounts if they're set
+    if (tempAmountOut !== "0") {
+      setAmountIn(tempAmountOut);
+    }
+    if (tempAmountIn !== "0") {
+      setAmountOut(tempAmountIn);
+    }
+
+    // Invert the exchange rate if it exists
+    if (exchangeRate && exchangeRate !== 0) {
+      setExchangeRate(1 / exchangeRate);
+    }
+  }, [
+    tokenIn,
+    tokenOut,
+    amountIn,
+    amountOut,
+    tokenInBalance,
+    tokenOutBalance,
+    tokenInValue,
+    tokenOutValue,
+    exchangeRate,
+  ]);
 
   function getTokenListEntry(tokenIn, tokenList) {
     return tokenList.coins.find((coin) => {
@@ -343,6 +392,26 @@ const Swap = () => {
               )}
             </Flex>
           </Box>
+
+          {/* Reverse Button */}
+          <Flex justifyContent="center" alignItems="center" position="relative">
+            <IconButton
+              aria-label="Reverse tokens"
+              icon={<FiArrowDown size="20px" />}
+              onClick={handleReverseTokens}
+              isRound
+              size="md"
+              bg="rgba(255, 255, 255, 0.1)"
+              color="#fff"
+              _hover={{
+                bg: "rgba(255, 255, 255, 0.2)",
+                transform: "rotate(180deg)",
+                transition: "transform 0.3s ease-in-out",
+              }}
+              transition="all 0.3s ease-in-out"
+              isDisabled={!tokenIn.address || !tokenOut.address}
+            />
+          </Flex>
 
           <Text color={"#fff"} fontSize={"14px"}>
             Token Out
