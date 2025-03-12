@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
+
+* {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  box-sizing: border-box;
+}
+
+h1, h2, h3, .important-text {
+  font-weight: 500; 
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    font-weight: 500; 
+  }
+  .small-text {
+    font-weight: 500;
+  }
+  body> w3m-modal {
+    height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* padding-bottom: 100px; */
+  }
+
+
+
+}
+
+html {
+  overflow-y: scroll;
+}
+
+::-webkit-scrollbar {
+  width: 0px; 
+  background-color: #05201b; 
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+
+body {
+  direction: ltr;
+}
+
+body.rtl {
+  direction: rtl;
+}
+
+:root {
+  --modal-background: rgba(0, 0, 0, 0.8);
+}
+
+body {
+  background-color: var(--body-background);
+}
+
+body.w3m-modal-open {
+  /* padding-right: 12px !important; */
+  overflow: hidden !important;
+}
+
+body > w3m-modal {
+  background-color: var(--modal-background);
+}
+w3m-modal {
+  width: 100vw;
+  height: 100vh;
+}
+
+.chakra-toast__inner {
+  padding: 1.5rem !important;
+}
+.chakra-toast__inner > div {
+  padding: 1.5 !important;
+}
+

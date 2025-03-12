@@ -1,0 +1,9 @@
+{
+  "navbar": {
+    "trade": "Trade"
+  },
+  "common": {
+    "connect-wallet": "Connect Wallet",
+    "text_footer_slogan": "Fast Trade with MINTEST"
+  }
+}
