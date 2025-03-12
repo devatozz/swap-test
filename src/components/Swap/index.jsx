@@ -19,7 +19,15 @@ import SwapTokenModal from "./TokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
-
+import TokenList from "src/constant/tokenlist.json";
+function formatValue(value) {
+  if (value >= 1) {
+    return parseFloat(value.toFixed(2)); // Keep 2 decimal places for values >= 1
+  } else {
+    let precision = Math.min(8, Math.max(2, Math.ceil(-Math.log10(value)) + 2));
+    return parseFloat(value.toFixed(precision));
+  }
+}
 const Swap = () => {
   const { t } = useLanguage();
   const toast = useToast();
@@ -84,6 +92,12 @@ const Swap = () => {
     }
   }, [tokenIn, exchangeRate, tokenOut]);
 
+  function getTokenListEntry(tokenIn, tokenList) {
+    return tokenList.coins.find((coin) => {
+      const parts = coin.split("::");
+      return parts[2] === tokenIn.symbol;
+    });
+  }
   // Fetch token price using the token address
   const fetchTokenPrice = useCallback(
     async (token, balanceSetter, valueSetter) => {
@@ -91,24 +105,21 @@ const Swap = () => {
 
       setLoading(true);
       try {
+        let coins = getTokenListEntry(token, TokenList);
         const response = await axios.post(
           "https://aftermath.finance/api/price-info",
           {
-            coins: [token.address],
+            coins: [coins],
           }
         );
-
-        const prices = response.data;
-        const tokenPrice = prices[token.address]?.price || 0;
-
-        // Get token balance - in a real implementation, you would get this from the wallet
+        const tokenPrice = response.data || 0;
+        const formattedPrice = tokenPrice?.[coins]?.price;
         const balance = await getTokenBalance(token.symbol);
         balanceSetter(balance);
 
-        // Calculate USD value
-        valueSetter((parseFloat(balance) * tokenPrice).toFixed(2));
+        valueSetter((parseFloat(balance) * formattedPrice).toFixed(9));
 
-        return tokenPrice;
+        return formattedPrice;
       } catch (error) {
         console.error(`Error fetching price for ${token.symbol}:`, error);
         toast({
@@ -126,7 +137,6 @@ const Swap = () => {
     [t, toast]
   );
 
-  // Mock function to get token balance - in a real implementation, you would get this from the wallet
   const getTokenBalance = async (tokenSymbol) => {
     // This is a mock function - replace with actual wallet integration
     const mockBalances = {
@@ -140,7 +150,6 @@ const Swap = () => {
     return mockBalances[tokenSymbol] || "0";
   };
 
-  // Update exchange rate when tokens change
   useEffect(() => {
     const updateExchangeRate = async () => {
       if (tokenIn.address && tokenOut.address) {
@@ -202,7 +211,7 @@ const Swap = () => {
     },
     [fetchTokenPrice, closeTokenOut]
   );
-
+  console.log("tokenOutValue", tokenOutValue);
   return (
     <Center
       bg="transparent"
@@ -231,7 +240,7 @@ const Swap = () => {
           <Box
             border={"1px solid rgba(255,255,255,0.5)"}
             width={"100%"}
-            height={"150px"}
+            height={"130px"}
             borderRadius={"12px"}
             padding={"12px"}
           >
@@ -328,7 +337,8 @@ const Swap = () => {
               </InputGroup>
               {tokenIn.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {tokenInBalance} {tokenIn.symbol} (${tokenInValue})
+                  Balance: {tokenInBalance} {tokenIn.symbol} ($
+                  {formatValue(Number(tokenInValue))})
                 </Text>
               )}
             </Flex>
@@ -340,7 +350,7 @@ const Swap = () => {
           <Box
             border={"1px solid rgba(255,255,255,0.5)"}
             width={"100%"}
-            height={"150px"}
+            height={"130px"}
             borderRadius={"12px"}
             padding={"12px"}
           >
@@ -412,8 +422,8 @@ const Swap = () => {
               </InputGroup>
               {tokenOut.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {tokenOutBalance} {tokenOut.symbol} (${tokenOutValue}
-                  )
+                  Balance: {tokenOutBalance} {tokenOut.symbol} ($
+                  {formatValue(Number(tokenOutValue))})
                 </Text>
               )}
             </Flex>
@@ -423,7 +433,7 @@ const Swap = () => {
             <Box>
               <Text color={"#fff"} fontSize={"14px"}>
                 Rate: 1 {tokenIn.symbol} ={" "}
-                {exchangeRate ? (1 / exchangeRate).toFixed(6) : "0"}{" "}
+                {exchangeRate ? formatValue(1 / exchangeRate) : "0"}{" "}
                 {tokenOut.symbol}
               </Text>
             </Box>
