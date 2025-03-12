@@ -33,6 +33,7 @@
     "not_found_token": "Không tìm thấy token",
     "error": "Lỗi",
     "swap": "Hoán đổi",
-    "loading_tokens": "Đang tải..."
+    "loading_tokens": "Đang tải...",
+    "failed_to_load_tokens": "Tải token thất bại"
   }
 }

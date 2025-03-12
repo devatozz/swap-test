@@ -203,7 +203,7 @@ export default function SwapTokenModal({
       } else {
         toast({
           title: t("common.error"),
-          description: t("toast.failed_to_load_tokens"),
+          description: t("common.failed_to_load_tokens"),
           status: "error",
           duration: 3000,
           isClosable: true,
@@ -213,7 +213,7 @@ export default function SwapTokenModal({
       console.error("Error fetching token list:", error);
       toast({
         title: t("common.error"),
-        description: t("toast.failed_to_load_tokens"),
+        description: t("common.failed_to_load_tokens"),
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -279,7 +279,7 @@ export default function SwapTokenModal({
         setTokenMsg("");
       } catch (e) {
         setTokenInfo(emptyToken);
-        setTokenMsg(t(`toast.not_found_token`));
+        setTokenMsg(t(`common.not_found_token`));
       } finally {
         setLoadingSearchToken(false);
       }
@@ -313,7 +313,7 @@ export default function SwapTokenModal({
 
         if (searchTokens.length === 0) {
           setTokenInfo(emptyToken);
-          setTokenMsg(t(`toast.not_found_token`));
+          setTokenMsg(t(`common.not_found_token`));
         } else {
           setTokenInfo(emptyToken);
         }
