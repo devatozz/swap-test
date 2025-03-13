@@ -279,7 +279,6 @@ const Swap = () => {
     },
     [amountIn]
   );
-
   useEffect(() => {
     if (amountIn && tokenIn && tokenOut) {
       fetchTradeRoutes(tokenIn, tokenOut);
@@ -356,6 +355,86 @@ const Swap = () => {
     },
     [fetchTokenPrice, closeTokenOut]
   );
+
+  // Function to execute the trade
+  const executeTrade = async () => {
+    if (!tradeRoutes) {
+      console.error("No trade routes available.");
+      return;
+    }
+
+    const params = {
+      walletAddress: currentAccount.address,
+      completeRoute: {
+        coinIn: {
+          type: tradeRoutes.coinIn.type,
+          amount: tradeRoutes.coinIn.amount,
+          tradeFee: tradeRoutes.coinIn.tradeFee,
+        },
+        coinOut: {
+          type: tradeRoutes.coinOut.type,
+          amount: tradeRoutes.coinOut.amount,
+          tradeFee: tradeRoutes.coinOut.tradeFee,
+        },
+        netTradeFeePercentage: 0,
+        spotPrice: tradeRoutes.spotPrice,
+        routes: tradeRoutes.routes.map((route) => ({
+          paths: route.paths,
+          portion: route.portion,
+          coinIn: {
+            type: route.coinIn.type,
+            amount: route.coinIn.amount,
+            tradeFee: route.coinIn.tradeFee,
+          },
+          coinOut: {
+            type: route.coinOut.type,
+            amount: route.coinOut.amount,
+            tradeFee: route.coinOut.tradeFee,
+          },
+          spotPrice: route.spotPrice,
+        })),
+      },
+
+      slippage: 0.01,
+      isSponsoredTx: false,
+    };
+
+    // Log the parameters being sent to the API
+    console.log(
+      "Executing trade with parameters:",
+      JSON.stringify(params, null, 2)
+    );
+
+    try {
+      const response = await axios.post(
+        "https://aftermath.finance/api/router/transactions/trade",
+        params
+      );
+      console.log("Trade response:", response.data);
+      toast({
+        title: "Trade Successful",
+        description: "Your trade has been executed successfully.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      // Log the error response for debugging
+      console.error("Error executing trade:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+        console.error("Error response headers:", error.response.headers);
+      }
+      toast({
+        title: "Trade Failed",
+        description: "There was an error executing your trade.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
 
   return (
     <Center
@@ -671,6 +750,66 @@ const Swap = () => {
         handleChoseToken={handleSelectTokenOut}
         selectedAddr={tokenIn.address}
       />
+
+      {tradeRoutes && (
+        <Box
+          mt={4}
+          p={4}
+          border="1px solid rgba(255, 255, 255, 0.5)"
+          borderRadius="12px"
+        >
+          <Text color={"#fff"} fontSize={"16px"} fontWeight="bold">
+            Trade Route Details
+          </Text>
+          <Text color={"#fff"} fontSize={"14px"}>
+            Spot Price: {tradeRoutes.spotPrice}
+          </Text>
+          <Text color={"#fff"} fontSize={"14px"}>
+            Coin In: {tradeRoutes.coinIn.type} - Amount:{" "}
+            {tradeRoutes.coinIn.amount}
+          </Text>
+          <Text color={"#fff"} fontSize={"14px"}>
+            Coin Out: {tradeRoutes.coinOut.type} - Amount:{" "}
+            {tradeRoutes.coinOut.amount}
+          </Text>
+
+          <Text color={"#fff"} fontSize={"14px"} mt={2}>
+            Routes:
+          </Text>
+          {tradeRoutes.routes.map((route, index) => (
+            <Box
+              key={index}
+              p={2}
+              border="1px solid rgba(255, 255, 255, 0.3)"
+              borderRadius="8px"
+              mb={2}
+            >
+              <Text color={"#fff"} fontSize={"14px"}>
+                Protocol: {route.protocolName}
+              </Text>
+              <Text color={"#fff"} fontSize={"12px"}>
+                Spot Price: {route.spotPrice}
+              </Text>
+              <Text color={"#fff"} fontSize={"12px"}>
+                Coin In: {route.coinIn.type} - Amount: {route.coinIn.amount}
+              </Text>
+              <Text color={"#fff"} fontSize={"12px"}>
+                Coin Out: {route.coinOut.type} - Amount: {route.coinOut.amount}
+              </Text>
+            </Box>
+          ))}
+
+          {/* Button to execute the trade */}
+          <Button
+            mt={4}
+            colorScheme="teal"
+            onClick={executeTrade}
+            isDisabled={!tradeRoutes}
+          >
+            Execute Trade
+          </Button>
+        </Box>
+      )}
     </Center>
   );
 };
