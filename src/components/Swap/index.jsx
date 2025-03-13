@@ -18,10 +18,16 @@ import { emptyToken } from "src/utils/utils";
 import SwapTokenModal from "./tokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
-import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
+import {
+  ConnectModal,
+  useCurrentAccount,
+  useSuiClient,
+  useSignAndExecuteTransactionBlock,
+} from "@mysten/dapp-kit";
 import TokenList from "src/constant/tokenlist.json";
 import { FiArrowDown } from "react-icons/fi";
 import { getTokenBalance } from "src/utils/getTokenBalance";
+import { TransactionBlock } from "@mysten/sui.js/transactions";
 
 function formatValue(value) {
   if (value >= 1) {
@@ -31,6 +37,7 @@ function formatValue(value) {
     return parseFloat(value.toFixed(precision));
   }
 }
+
 const formatNumber = (value) => {
   if (!value) return "";
   const cleanedValue = value.replace(/,/g, "");
@@ -40,6 +47,7 @@ const formatNumber = (value) => {
     ? `${formattedInteger}.${decimal}`
     : formattedInteger;
 };
+
 const Swap = () => {
   const { t } = useLanguage();
   const toast = useToast();
@@ -48,6 +56,11 @@ const Swap = () => {
   const [tokenIn, setTokenIn] = useState(emptyToken);
   const [tokenOut, setTokenOut] = useState(emptyToken);
   const currentAccount = useCurrentAccount();
+  const {
+    mutate: signAndExecuteTransactionBlock,
+    isPending: isTransactionPending,
+  } = useSignAndExecuteTransactionBlock();
+
   const {
     isOpen: openTokenIn,
     onOpen: openTokenInModal,
@@ -69,7 +82,6 @@ const Swap = () => {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [tradeRoutes, setTradeRoutes] = useState(null);
 
-  // Handle input amount changes
   const handleSetAmountIn = useCallback(
     (value) => {
       const sanitizedValue = value.replace(/,/g, ".");
@@ -81,7 +93,6 @@ const Swap = () => {
         return;
       }
 
-      // Calculate amount out if we have exchange rate
       if (exchangeRate && tokenIn.address && tokenOut.address) {
         const calculatedAmountOut = (parseFloat(amount) * exchangeRate).toFixed(
           6
@@ -96,7 +107,6 @@ const Swap = () => {
     if (tokenInBalance && tokenInBalance !== "0") {
       setAmountIn(tokenInBalance);
 
-      // Calculate amount out if we have exchange rate
       if (exchangeRate && tokenIn.address && tokenOut.address) {
         const calculatedAmountOut = (
           parseFloat(tokenInBalance) * exchangeRate
@@ -106,9 +116,7 @@ const Swap = () => {
     }
   }, [tokenIn, exchangeRate, tokenOut, tokenInBalance]);
 
-  // Add reverse function to swap token in and token out
   const handleReverseTokens = useCallback(() => {
-    // Save the current values
     const tempTokenIn = tokenIn;
     const tempTokenOut = tokenOut;
     const tempAmountIn = amountIn;
@@ -118,17 +126,14 @@ const Swap = () => {
     const tempTokenInValue = tokenInValue;
     const tempTokenOutValue = tokenOutValue;
 
-    // Swap tokens
     setTokenIn(tempTokenOut);
     setTokenOut(tempTokenIn);
 
-    // Swap balances and values
     setTokenInBalance(tempTokenOutBalance);
     setTokenOutBalance(tempTokenInBalance);
     setTokenInValue(tempTokenOutValue);
     setTokenOutValue(tempTokenInValue);
 
-    // Swap amounts if they're set
     if (tempAmountOut !== "0") {
       setAmountIn(tempAmountOut);
     }
@@ -136,7 +141,6 @@ const Swap = () => {
       setAmountOut(tempAmountIn);
     }
 
-    // Invert the exchange rate if it exists
     if (exchangeRate && exchangeRate !== 0) {
       setExchangeRate(1 / exchangeRate);
     }
@@ -179,6 +183,7 @@ const Swap = () => {
           status: "error",
           duration: 3000,
           isClosable: true,
+          position: "bottom-right",
         });
         balanceSetter("0");
         return "0";
@@ -189,7 +194,6 @@ const Swap = () => {
     [currentAccount, t, toast]
   );
 
-  // Fetch token price using the token address
   const fetchTokenPrice = useCallback(
     async (token, balanceSetter, valueSetter) => {
       if (!token || !token.address) return;
@@ -220,6 +224,7 @@ const Swap = () => {
           status: "error",
           duration: 3000,
           isClosable: true,
+          position: "bottom-right",
         });
         return 0;
       } finally {
@@ -241,7 +246,6 @@ const Swap = () => {
 
       if (!tokenInEntry || !tokenOutEntry || amountIn <= 0) {
         return;
-        d;
       }
 
       const params = {
@@ -274,11 +278,13 @@ const Swap = () => {
           status: "error",
           duration: 3000,
           isClosable: true,
+          position: "bottom-right",
         });
       }
     },
     [amountIn]
   );
+
   useEffect(() => {
     if (amountIn && tokenIn && tokenOut) {
       fetchTradeRoutes(tokenIn, tokenOut);
@@ -324,7 +330,6 @@ const Swap = () => {
 
     updateExchangeRate();
 
-    // Also update balances when wallet changes
     if (currentAccount?.address) {
       if (tokenIn.symbol) {
         fetchTokenBalance(tokenIn, setTokenInBalance);
@@ -335,7 +340,6 @@ const Swap = () => {
     }
   }, [tokenIn, tokenOut, fetchTokenPrice, currentAccount, fetchTokenBalance]);
 
-  // Handler for token selection
   const handleSelectTokenIn = useCallback(
     async (token) => {
       setTokenIn(token);
@@ -356,13 +360,12 @@ const Swap = () => {
     [fetchTokenPrice, closeTokenOut]
   );
 
-  // Function to execute the trade
-  const executeTrade = async () => {
+  const prepareTrade = async () => {
     if (!tradeRoutes) {
       console.error("No trade routes available.");
       return;
     }
-
+    setLoading(true);
     const params = {
       walletAddress: currentAccount.address,
       completeRoute: {
@@ -394,45 +397,127 @@ const Swap = () => {
           spotPrice: route.spotPrice,
         })),
       },
-
       slippage: 0.01,
       isSponsoredTx: false,
     };
-
-    // Log the parameters being sent to the API
-    console.log(
-      "Executing trade with parameters:",
-      JSON.stringify(params, null, 2)
-    );
-
     try {
       const response = await axios.post(
         "https://aftermath.finance/api/router/transactions/trade",
         params
       );
-      console.log("Trade response:", response.data);
-      toast({
-        title: "Trade Successful",
-        description: "Your trade has been executed successfully.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      const txData = response.data;
+      await executeTrade({ txb: txData });
     } catch (error) {
-      // Log the error response for debugging
-      console.error("Error executing trade:", error);
+      console.error("Error preparing trade:", error);
       if (error.response) {
         console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-        console.error("Error response headers:", error.response.headers);
       }
       toast({
-        title: "Trade Failed",
-        description: "There was an error executing your trade.",
+        title: "Trade Preparation Failed",
+        description:
+          error.message || "There was an error preparing your trade.",
         status: "error",
         duration: 3000,
         isClosable: true,
+        position: "bottom-right",
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeTrade = async (payload) => {
+    try {
+      if (!payload || !payload.txb) {
+        toast({
+          title: "Trade Failed",
+          description: "Invalid transaction payload structure.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+          position: "bottom-right",
+        });
+        return;
+      }
+
+      let txb;
+
+      if (payload.txb) {
+        txb = TransactionBlock.from(payload.txb);
+      } else {
+        txb = TransactionBlock.from(payload);
+      }
+
+      signAndExecuteTransactionBlock(
+        {
+          transactionBlock: txb,
+          options: {
+            showEffects: true,
+            showEvents: true,
+          },
+        },
+        {
+          onSuccess: (result) => {
+            if (tokenIn.symbol) {
+              fetchTokenBalance(tokenIn, setTokenInBalance);
+            }
+            if (tokenOut.symbol) {
+              fetchTokenBalance(tokenOut, setTokenOutBalance);
+            }
+
+            setAmountIn("0");
+            setAmountOut("0");
+
+            toast({
+              title: "Trade Successful",
+              description: `Successfully swapped ${tokenIn.symbol} to ${tokenOut.symbol}`,
+              status: "success",
+              duration: 5000,
+              isClosable: true,
+              position: "bottom-right",
+            });
+
+            fetchTradeHistory(currentAccount.address);
+          },
+          onError: (error) => {
+            console.error("Transaction failed:", error);
+            toast({
+              title: "Trade Failed",
+              description:
+                error.message || "There was an error executing your trade.",
+              status: "error",
+              duration: 5000,
+              isClosable: true,
+              position: "bottom-right",
+            });
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error executing trade:", error);
+      toast({
+        title: "Trade Failed",
+        description:
+          error.message || "There was an error executing your trade.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom-right",
+      });
+    }
+  };
+
+  const fetchTradeHistory = async (walletAddress) => {
+    try {
+      const response = await axios.post(
+        "https://aftermath.finance/api/router/events-by-user",
+        {
+          walletAddress: walletAddress,
+          limit: 10,
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching trade history:", error);
     }
   };
 
@@ -722,14 +807,17 @@ const Swap = () => {
                 "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
               background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
             }}
-            isLoading={loading || balanceLoading}
+            isLoading={loading || balanceLoading || isTransactionPending}
+            onClick={prepareTrade} // Changed from executeTrade to prepareTrade
             isDisabled={
               !tokenIn.symbol ||
               !tokenOut.symbol ||
               amountIn === "0" ||
               loading ||
               balanceLoading ||
-              !currentAccount
+              isTransactionPending ||
+              !currentAccount ||
+              !tradeRoutes
             }
           >
             {!currentAccount ? "Connect Wallet" : t("common.swap")}
@@ -750,66 +838,6 @@ const Swap = () => {
         handleChoseToken={handleSelectTokenOut}
         selectedAddr={tokenIn.address}
       />
-
-      {tradeRoutes && (
-        <Box
-          mt={4}
-          p={4}
-          border="1px solid rgba(255, 255, 255, 0.5)"
-          borderRadius="12px"
-        >
-          <Text color={"#fff"} fontSize={"16px"} fontWeight="bold">
-            Trade Route Details
-          </Text>
-          <Text color={"#fff"} fontSize={"14px"}>
-            Spot Price: {tradeRoutes.spotPrice}
-          </Text>
-          <Text color={"#fff"} fontSize={"14px"}>
-            Coin In: {tradeRoutes.coinIn.type} - Amount:{" "}
-            {tradeRoutes.coinIn.amount}
-          </Text>
-          <Text color={"#fff"} fontSize={"14px"}>
-            Coin Out: {tradeRoutes.coinOut.type} - Amount:{" "}
-            {tradeRoutes.coinOut.amount}
-          </Text>
-
-          <Text color={"#fff"} fontSize={"14px"} mt={2}>
-            Routes:
-          </Text>
-          {tradeRoutes.routes.map((route, index) => (
-            <Box
-              key={index}
-              p={2}
-              border="1px solid rgba(255, 255, 255, 0.3)"
-              borderRadius="8px"
-              mb={2}
-            >
-              <Text color={"#fff"} fontSize={"14px"}>
-                Protocol: {route.protocolName}
-              </Text>
-              <Text color={"#fff"} fontSize={"12px"}>
-                Spot Price: {route.spotPrice}
-              </Text>
-              <Text color={"#fff"} fontSize={"12px"}>
-                Coin In: {route.coinIn.type} - Amount: {route.coinIn.amount}
-              </Text>
-              <Text color={"#fff"} fontSize={"12px"}>
-                Coin Out: {route.coinOut.type} - Amount: {route.coinOut.amount}
-              </Text>
-            </Box>
-          ))}
-
-          {/* Button to execute the trade */}
-          <Button
-            mt={4}
-            colorScheme="teal"
-            onClick={executeTrade}
-            isDisabled={!tradeRoutes}
-          >
-            Execute Trade
-          </Button>
-        </Box>
-      )}
     </Center>
   );
 };
