@@ -12,12 +12,11 @@ import {
   useToast,
   IconButton,
 } from "@chakra-ui/react";
-import TokenAvatar from "src/components/Swap/tokenAvatar";
+import TokenAvatar from "src/components/Swap/TokenAvatar";
 import { currencyFormat, formatInputAmount } from "src/utils/stringUtil";
 import { emptyToken } from "src/utils/utils";
-import SwapTokenModal from "./tokensModal";
+import SwapTokenModal from "./TokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
-import showIcon from "src/asset/images/swap/showIcon.svg";
 import {
   ConnectModal,
   useCurrentAccount,
