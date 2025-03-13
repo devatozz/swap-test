@@ -344,7 +344,6 @@ const Swap = () => {
     async (token) => {
       setTokenIn(token);
       await fetchTokenPrice(token, setTokenInBalance, setTokenInValue);
-
       closeTokenIn();
     },
     [fetchTokenPrice, closeTokenIn]
@@ -354,11 +353,25 @@ const Swap = () => {
     async (token) => {
       setTokenOut(token);
       await fetchTokenPrice(token, setTokenOutBalance, setTokenOutValue);
-
       closeTokenOut();
     },
     [fetchTokenPrice, closeTokenOut]
   );
+
+  useEffect(() => {
+    const updateBalances = async () => {
+      if (currentAccount?.address) {
+        if (tokenIn.symbol) {
+          await fetchTokenBalance(tokenIn, setTokenInBalance);
+        }
+        if (tokenOut.symbol) {
+          await fetchTokenBalance(tokenOut, setTokenOutBalance);
+        }
+      }
+    };
+
+    updateBalances();
+  }, [tokenIn, tokenOut, currentAccount]);
 
   const prepareTrade = async () => {
     if (!tradeRoutes) {
@@ -457,13 +470,9 @@ const Swap = () => {
           },
         },
         {
-          onSuccess: (result) => {
-            if (tokenIn.symbol) {
-              fetchTokenBalance(tokenIn, setTokenInBalance);
-            }
-            if (tokenOut.symbol) {
-              fetchTokenBalance(tokenOut, setTokenOutBalance);
-            }
+          onSuccess: async (result) => {
+            await fetchTokenBalance(tokenIn, setTokenInBalance);
+            await fetchTokenBalance(tokenOut, setTokenOutBalance);
 
             setAmountIn("0");
             setAmountOut("0");
