@@ -67,6 +67,7 @@ const Swap = () => {
   const [loading, setLoading] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [tradeRoutes, setTradeRoutes] = useState(null);
 
   // Handle input amount changes
   const handleSetAmountIn = useCallback(
@@ -228,11 +229,67 @@ const Swap = () => {
     [t, toast, fetchTokenBalance]
   );
 
+  const fetchTradeRoutes = useCallback(
+    async (tokenIn, tokenOut) => {
+      let tokenInEntry = getTokenListEntry(tokenIn, TokenList);
+      let tokenOutEntry = getTokenListEntry(tokenOut, TokenList);
+
+      const parsedAmountIn = parseFloat(amountIn.replace(/,/g, ""));
+      if (isNaN(parsedAmountIn) || parsedAmountIn <= 0) {
+        return;
+      }
+
+      if (!tokenInEntry || !tokenOutEntry || amountIn <= 0) {
+        return;
+        d;
+      }
+
+      const params = {
+        coinInType: tokenInEntry,
+        coinInAmount:
+          (parsedAmountIn * Math.pow(10, tokenIn?.decimals)).toString() + "n",
+        coinOutType: tokenOutEntry,
+      };
+
+      console.log("Fetching trade routes with params:", params);
+
+      try {
+        const response = await axios.post(
+          "https://aftermath.finance/api/router/trade-route",
+          params
+        );
+        const routes = response.data.routes;
+
+        setTradeRoutes({
+          spotPrice: response.data.spotPrice,
+          coinIn: response.data.coinIn,
+          coinOut: response.data.coinOut,
+          routes: routes,
+        });
+      } catch (error) {
+        console.error("Error fetching trade routes:", error);
+        toast({
+          title: t("common.error"),
+          description: t("common.failed_to_load_routes"),
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    },
+    [amountIn]
+  );
+
+  useEffect(() => {
+    if (amountIn && tokenIn && tokenOut) {
+      fetchTradeRoutes(tokenIn, tokenOut);
+    }
+  }, [amountIn, tokenIn, tokenOut, fetchTradeRoutes]);
+
   useEffect(() => {
     const updateExchangeRate = async () => {
       if (tokenIn.address && tokenOut.address) {
         try {
-          // Fetch prices for both tokens
           const priceInPromise = fetchTokenPrice(
             tokenIn,
             setTokenInBalance,
@@ -249,12 +306,10 @@ const Swap = () => {
             priceOutPromise,
           ]);
 
-          // Calculate exchange rate
           if (priceIn && priceOut && priceIn > 0) {
             const rate = priceIn / priceOut;
             setExchangeRate(rate);
 
-            // Update amount out if amount in is set
             if (amountIn && amountIn !== "0") {
               const calculatedAmountOut = (parseFloat(amountIn) * rate).toFixed(
                 6
@@ -286,6 +341,7 @@ const Swap = () => {
     async (token) => {
       setTokenIn(token);
       await fetchTokenPrice(token, setTokenInBalance, setTokenInValue);
+
       closeTokenIn();
     },
     [fetchTokenPrice, closeTokenIn]
@@ -295,6 +351,7 @@ const Swap = () => {
     async (token) => {
       setTokenOut(token);
       await fetchTokenPrice(token, setTokenOutBalance, setTokenOutValue);
+
       closeTokenOut();
     },
     [fetchTokenPrice, closeTokenOut]
@@ -320,7 +377,7 @@ const Swap = () => {
           display={"flex"}
           padding={"24px"}
           flexDirection={"column"}
-          gap={"16px"}
+          gap={"8px"}
         >
           <Text color={"#fff"} fontSize={"14px"}>
             Token In
@@ -553,7 +610,29 @@ const Swap = () => {
               </Text>
             </Box>
           )}
-
+          {tradeRoutes && (
+            <Box width={"100%"}>
+              <Text color={"#fff"} fontSize={"14px"} mb={2}>
+                Routes:
+              </Text>
+              {tradeRoutes.routes?.map((route, index) => (
+                <Box
+                  key={index}
+                  p={2}
+                  border="1px solid rgba(255, 255, 255, 0.3)"
+                  borderRadius="8px"
+                  mb={2}
+                >
+                  <Text color={"#fff"} fontSize={"14px"}>
+                    Protocol: {route?.paths[0].protocolName}
+                  </Text>
+                  <Text color={"#fff"} fontSize={"12px"}>
+                    Spot Price: {route?.spotPrice}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
+          )}
           <Button
             width="100%"
             height="48px"
