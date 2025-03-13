@@ -51,6 +51,7 @@
     "sharp": "^0.33.5",
     "styled-components": "^6.1.13",
     "toformat": "^2.0.0",
+    "use-debounce": "^10.0.4",
     "web3": "^1.2.9",
     "yarn": "^1.22.22"
   },

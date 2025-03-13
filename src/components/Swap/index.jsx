@@ -656,10 +656,8 @@ const Swap = () => {
               </InputGroup>
               {tokenIn.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {balanceLoading ? "Loading..." : tokenInBalance}{" "}
-                  {tokenIn.symbol}
-                  {!balanceLoading &&
-                    tokenInValue !== "0" &&
+                  Balance: {tokenInBalance} {tokenIn.symbol}
+                  {tokenInValue !== "0" &&
                     ` ($${formatValue(Number(tokenInValue))})`}
                 </Text>
               )}
@@ -764,10 +762,8 @@ const Swap = () => {
               </InputGroup>
               {tokenOut.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {balanceLoading ? "Loading..." : tokenOutBalance}{" "}
-                  {tokenOut.symbol}
-                  {!balanceLoading &&
-                    tokenOutValue !== "0" &&
+                  Balance: {tokenOutBalance} {tokenOut.symbol}
+                  {tokenOutValue !== "0" &&
                     ` ($${formatValue(Number(tokenOutValue))})`}
                 </Text>
               )}
