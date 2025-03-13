@@ -28,6 +28,8 @@ import TokenList from "src/constant/tokenlist.json";
 import { FiArrowDown } from "react-icons/fi";
 import { getTokenBalance } from "src/utils/getTokenBalance";
 import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { FiSettings } from "react-icons/fi";
+import { MdClose } from "react-icons/md";
 
 function formatValue(value) {
   if (value >= 1) {
@@ -71,6 +73,12 @@ const Swap = () => {
     isOpen: openTokenOut,
     onOpen: openTokenOutModal,
     onClose: closeTokenOut,
+  } = useDisclosure();
+
+  const {
+    isOpen: isSlippageModalOpen,
+    onOpen: openSlippageModal,
+    onClose: closeSlippageModal,
   } = useDisclosure();
 
   const [tokenInBalance, setTokenInBalance] = useState("0");
@@ -564,6 +572,68 @@ const Swap = () => {
       px={4}
       color={"#fff"}
     >
+      {isSlippageModalOpen && (
+        <Box
+          position="fixed"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          bg="#101010"
+          border={"1px solid rgba(255,255,255,0.4)"}
+          borderRadius="12px"
+          p={4}
+          zIndex={1000}
+          width="300px"
+        >
+          <Flex justifyContent="space-between" alignItems="center">
+            <Text color="#fff" fontSize="18px">
+              Set Slippage
+            </Text>
+            <IconButton
+              aria-label="Close Slippage Modal"
+              icon={<MdClose />}
+              onClick={closeSlippageModal}
+              bg="transparent"
+              color="#fff"
+              _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+            />
+          </Flex>
+          <Box mt={4}>
+            <Input
+              type="number"
+              value={slippage}
+              onChange={(e) =>
+                setSlippage(Math.max(0, Math.min(100, e.target.value)))
+              }
+              placeholder="Enter slippage percentage"
+              border="none"
+              outline="none"
+              _placeholder={{ color: "rgba(255, 255, 255, 0.4)" }}
+              fontSize={{ base: "16px", md: "20px" }}
+              fontWeight="700"
+              lineHeight="30px"
+              padding="0px"
+              autoComplete="off"
+              fontFamily="Lexend"
+              _focus={{ boxShadow: "none", border: "none", outline: "none" }}
+            />
+          </Box>
+          <Button
+            mt={4}
+            width="100%"
+            onClick={closeSlippageModal}
+            bg="linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"
+            _hover={{
+              boxShadow:
+                "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
+              background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
+            }}
+          >
+            Save
+          </Button>
+        </Box>
+      )}
+
       <Box>
         <Box
           border={"2px solid rgba(255,255,255,0.1)"}
@@ -571,10 +641,25 @@ const Swap = () => {
           height={"fit-content"}
           borderRadius={"12px"}
           display={"flex"}
-          padding={"24px"}
+          padding={"8px 24px 24px 24px"}
           flexDirection={"column"}
           gap={"8px"}
         >
+          <Box
+            display={"flex"}
+            width={"100%"}
+            justifyContent={"end"}
+            alignItems={"center"}
+          >
+            <IconButton
+              aria-label="Set Slippage"
+              icon={<FiSettings />}
+              onClick={openSlippageModal}
+              bg="transparent"
+              color="#fff"
+              _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+            />
+          </Box>
           <Text color={"#fff"} fontSize={"14px"}>
             Token In
           </Text>
@@ -829,29 +914,6 @@ const Swap = () => {
               </Text>
             </Box>
           )}
-          <Box>
-            <Text color={"#fff"} fontSize={"14px"}>
-              Slippage (%):
-            </Text>
-            <Input
-              type="number"
-              value={slippage}
-              onChange={(e) =>
-                setSlippage(Math.max(0, Math.min(100, e.target.value)))
-              }
-              placeholder="Enter slippage percentage"
-              border="none"
-              outline="none"
-              _placeholder={{ color: "rgba(255, 255, 255, 0.4)" }}
-              fontSize={{ base: "16px", md: "20px" }}
-              fontWeight="700"
-              lineHeight="30px"
-              padding="0px"
-              autoComplete="off"
-              fontFamily="Lexend"
-              _focus={{ boxShadow: "none", border: "none", outline: "none" }}
-            />
-          </Box>
 
           <Box>
             <Text color={"#fff"} fontSize={"14px"}>
