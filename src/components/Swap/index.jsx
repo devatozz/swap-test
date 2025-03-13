@@ -81,6 +81,8 @@ const Swap = () => {
   const [exchangeRate, setExchangeRate] = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [tradeRoutes, setTradeRoutes] = useState(null);
+  const [slippage, setSlippage] = useState(5);
+  const [minReceive, setMinReceive] = useState("0");
 
   const handleSetAmountIn = useCallback(
     (value) => {
@@ -90,6 +92,7 @@ const Swap = () => {
 
       if (!amount || amount === "0") {
         setAmountOut("0");
+        setMinReceive("0");
         return;
       }
 
@@ -98,9 +101,15 @@ const Swap = () => {
           6
         );
         setAmountOut(calculatedAmountOut);
+
+        const minReceiveAmount = (
+          parseFloat(calculatedAmountOut) *
+          (1 - slippage / 100)
+        ).toFixed(6);
+        setMinReceive(minReceiveAmount);
       }
     },
-    [tokenIn, tokenOut, exchangeRate]
+    [tokenIn, tokenOut, exchangeRate, slippage]
   );
 
   const handleSetMaxTokenIn = useCallback(() => {
@@ -820,6 +829,35 @@ const Swap = () => {
               </Text>
             </Box>
           )}
+          <Box>
+            <Text color={"#fff"} fontSize={"14px"}>
+              Slippage (%):
+            </Text>
+            <Input
+              type="number"
+              value={slippage}
+              onChange={(e) =>
+                setSlippage(Math.max(0, Math.min(100, e.target.value)))
+              }
+              placeholder="Enter slippage percentage"
+              border="none"
+              outline="none"
+              _placeholder={{ color: "rgba(255, 255, 255, 0.4)" }}
+              fontSize={{ base: "16px", md: "20px" }}
+              fontWeight="700"
+              lineHeight="30px"
+              padding="0px"
+              autoComplete="off"
+              fontFamily="Lexend"
+              _focus={{ boxShadow: "none", border: "none", outline: "none" }}
+            />
+          </Box>
+
+          <Box>
+            <Text color={"#fff"} fontSize={"14px"}>
+              Minimum Receive: {minReceive} {tokenOut.symbol}
+            </Text>
+          </Box>
           {tradeRoutes && (
             <Box width={"100%"}>
               <Text color={"#fff"} fontSize={"14px"} mb={2}>
@@ -843,6 +881,7 @@ const Swap = () => {
               ))}
             </Box>
           )}
+
           <Button
             width="100%"
             height="48px"
@@ -854,7 +893,7 @@ const Swap = () => {
               background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
             }}
             isLoading={loading || balanceLoading || isTransactionPending}
-            onClick={prepareTrade} // Changed from executeTrade to prepareTrade
+            onClick={prepareTrade}
             isDisabled={
               !tokenIn.symbol ||
               !tokenOut.symbol ||
@@ -863,7 +902,8 @@ const Swap = () => {
               balanceLoading ||
               isTransactionPending ||
               !currentAccount ||
-              !tradeRoutes
+              !tradeRoutes ||
+              parseFloat(amountOut) < parseFloat(minReceive)
             }
           >
             {!currentAccount ? "Connect Wallet" : t("common.swap")}
