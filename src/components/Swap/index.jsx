@@ -116,6 +116,20 @@ const Swap = () => {
     }
   }, [tokenIn, exchangeRate, tokenOut, tokenInBalance]);
 
+  const handleSetHalfTokenIn = useCallback(() => {
+    if (tokenInBalance && tokenInBalance !== "0") {
+      const halfAmount = (parseFloat(tokenInBalance) / 2).toFixed(6);
+      setAmountIn(halfAmount);
+
+      if (exchangeRate && tokenIn.address && tokenOut.address) {
+        const calculatedAmountOut = (
+          parseFloat(halfAmount) * exchangeRate
+        ).toFixed(6);
+        setAmountOut(calculatedAmountOut);
+      }
+    }
+  }, [tokenIn, exchangeRate, tokenOut, tokenInBalance]);
+
   const handleReverseTokens = useCallback(() => {
     const tempTokenIn = tokenIn;
     const tempTokenOut = tokenOut;
@@ -558,11 +572,57 @@ const Swap = () => {
           <Box
             border={"1px solid rgba(255,255,255,0.5)"}
             width={"100%"}
-            height={"130px"}
+            height={"fit-content"}
+            minH={"130px"}
             borderRadius={"12px"}
             padding={"12px"}
           >
-            <Flex gap={6} flexDirection={"column"} mt={2}>
+            <Flex gap={1} flexDirection={"column"} mt={2}>
+              <Box
+                display={"flex"}
+                width={"100%"}
+                gap={2}
+                alignItems={"center"}
+                justifyContent={"end"}
+              >
+                <Button
+                  minWidth={{ md: "53px", base: "48px" }}
+                  height={"27px"}
+                  padding={"8px"}
+                  borderRadius={"24px"}
+                  fontSize={{ base: "14px", md: "16px" }}
+                  onClick={handleSetMaxTokenIn}
+                  bg={"linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"}
+                  _hover={{
+                    boxShadow:
+                      "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
+                    background:
+                      "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
+                  }}
+                  lineHeight={"0px"}
+                >
+                  {t(`common.max`)}
+                </Button>
+
+                <Button
+                  minWidth={{ md: "53px", base: "48px" }}
+                  height={"27px"}
+                  padding={"8px"}
+                  borderRadius={"24px"}
+                  fontSize={{ base: "14px", md: "16px" }}
+                  onClick={handleSetHalfTokenIn}
+                  bg={"linear-gradient(90deg, #FF9F40 0%, #EEFF06 100%)"}
+                  _hover={{
+                    boxShadow:
+                      "0 0 15px rgba(255, 159, 64, 0.6), 0 0 10px rgba(255, 255, 6, 0.4)",
+                    background:
+                      "linear-gradient(90deg, #eeff06 0%, #ff9f40 100%)",
+                  }}
+                  lineHeight={"0px"}
+                >
+                  {t(`common.half`)}
+                </Button>
+              </Box>
               <InputGroup justifyContent={"space-between"}>
                 <Input
                   value={amountIn === "0" ? "" : formatNumber(amountIn)}
@@ -604,26 +664,6 @@ const Swap = () => {
                   justifyContent={"end"}
                   gap={"10px"}
                 >
-                  <Button
-                    minWidth={{ md: "53px", base: "48px" }}
-                    height={"27px"}
-                    padding={"8px"}
-                    borderRadius={"24px"}
-                    fontSize={{ base: "14px", md: "16px" }}
-                    onClick={handleSetMaxTokenIn}
-                    bg={"linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"}
-                    _hover={{
-                      boxShadow:
-                        "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
-                      background:
-                        "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
-                    }}
-                    lineHeight={"0px"}
-                    mx={"5px"}
-                    isLoading={balanceLoading}
-                  >
-                    {t(`common.max`)}
-                  </Button>
                   <Button
                     border={"none"}
                     outline={"none"}
@@ -690,7 +730,8 @@ const Swap = () => {
           <Box
             border={"1px solid rgba(255,255,255,0.5)"}
             width={"100%"}
-            height={"130px"}
+            height={"fit-content"}
+            minH={"130px"}
             borderRadius={"12px"}
             padding={"12px"}
           >

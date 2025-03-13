@@ -33,6 +33,7 @@
     "error": "Error",
     "swap": "Swap",
     "loading_tokens": "Loading...",
-    "failed_to_load_tokens": "fail to load token"
+    "failed_to_load_tokens": "fail to load token",
+    "half": "Half"
   }
 }
