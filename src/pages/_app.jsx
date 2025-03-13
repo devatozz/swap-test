@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import Head from "next/head";
+import React from "react";
 import "@mysten/dapp-kit/dist/index.css";
-import { useRouter } from "next/router";
 import { CacheProvider } from "@emotion/react";
 import createEmotionCache from "src/createEmotionCache";
 import "../styles/global.css";
@@ -13,9 +13,12 @@ import styled from "styled-components";
 import { getFullnodeUrl } from "@mysten/sui.js/client";
 import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import favicon from "src/public/static/favicon.ico";
+
 const WrapComponent = styled.div`
   background: #101010;
 `;
+
 const queryClient = new QueryClient();
 const networks = {
   localnet: { url: getFullnodeUrl("localnet") },
@@ -31,6 +34,10 @@ export default function App(props) {
 
   return (
     <CacheProvider value={emotionCache}>
+      <Head>
+        <title>MIN TEST</title>
+        <link rel="shortcut icon" href={favicon.src} />
+      </Head>
       <WrapComponent>
         <LanguageProvider>
           <ChakraProvider theme={theme}>
