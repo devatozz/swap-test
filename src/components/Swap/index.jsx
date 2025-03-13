@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
-import SlippageSetting from "./SlippageSetting";
 import {
   Center,
   Box,
@@ -13,10 +12,10 @@ import {
   useToast,
   IconButton,
 } from "@chakra-ui/react";
-import TokenAvatar from "src/components/swap/TokenAvatar";
+import TokenAvatar from "src/components/Swap/tokenAvatar";
 import { currencyFormat, formatInputAmount } from "src/utils/stringUtil";
 import { emptyToken } from "src/utils/utils";
-import SwapTokenModal from "./TokensModal";
+import SwapTokenModal from "./tokensModal";
 import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";

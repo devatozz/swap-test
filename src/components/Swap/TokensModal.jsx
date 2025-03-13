@@ -27,7 +27,7 @@ import { SearchIcon, InfoIcon } from "@chakra-ui/icons";
 
 import { emptyToken } from "src/utils/utils";
 import styled from "styled-components";
-import TokenAvatar from "./TokenAvatar";
+import TokenAvatar from "./tokenAvatar";
 import { useLanguage } from "src/contexts/LanguageContext";
 import axios from "axios";
 import TokenList from "src/constant/tokenlist.json";
