@@ -35,6 +35,8 @@
     "swap": "Hoán đổi",
     "loading_tokens": "Đang tải...",
     "failed_to_load_tokens": "Tải token thất bại",
-    "half": "1 nửa"
+    "half": "1 nửa",
+    "rate": "Tỉ lệ",
+    "save": "Lưu"
   }
 }

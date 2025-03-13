@@ -441,7 +441,7 @@ const Swap = () => {
           spotPrice: route.spotPrice,
         })),
       },
-      slippage: 0.01,
+      slippage: Number(slippage / 100),
       isSponsoredTx: false,
     };
     try {
@@ -560,7 +560,6 @@ const Swap = () => {
       console.error("Error fetching trade history:", error);
     }
   };
-
   return (
     <Center
       bg="transparent"
@@ -575,11 +574,22 @@ const Swap = () => {
       {isSlippageModalOpen && (
         <Box
           position="fixed"
+          top="0"
+          left="0"
+          width="100%"
+          height="100%"
+          bg="rgba(0, 0, 0, 0.8)"
+          zIndex={999}
+        />
+      )}
+
+      {isSlippageModalOpen && (
+        <Box
+          position="fixed"
           top="50%"
           left="50%"
           transform="translate(-50%, -50%)"
           bg="#101010"
-          border={"1px solid rgba(255,255,255,0.4)"}
           borderRadius="12px"
           p={4}
           zIndex={1000}
@@ -828,6 +838,7 @@ const Swap = () => {
             minH={"130px"}
             borderRadius={"12px"}
             padding={"12px"}
+            mb={"8px"}
           >
             <Flex gap={6} flexDirection={"column"} mt={2}>
               <InputGroup justifyContent={"space-between"}>
@@ -946,6 +957,7 @@ const Swap = () => {
 
           <Button
             width="100%"
+            mt={"12px"}
             height="48px"
             borderRadius="12px"
             bg="linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"
