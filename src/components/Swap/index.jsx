@@ -20,16 +20,18 @@ import { useLanguage } from "src/contexts/LanguageContext";
 import showIcon from "src/asset/images/swap/showIcon.svg";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
 import TokenList from "src/constant/tokenlist.json";
-import { FiArrowDown } from "react-icons/fi"; // Import arrow icon for the reverse button
+import { FiArrowDown } from "react-icons/fi";
+import { getTokenBalance } from "src/utils/getTokenBalance";
 
 function formatValue(value) {
   if (value >= 1) {
-    return parseFloat(value.toFixed(2)); // Keep 2 decimal places for values >= 1
+    return parseFloat(value.toFixed(2));
   } else {
     let precision = Math.min(8, Math.max(2, Math.ceil(-Math.log10(value)) + 2));
     return parseFloat(value.toFixed(precision));
   }
 }
+
 const Swap = () => {
   const { t } = useLanguage();
   const toast = useToast();
@@ -56,6 +58,7 @@ const Swap = () => {
   const [tokenOutValue, setTokenOutValue] = useState("0");
   const [loading, setLoading] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   // Handle input amount changes
   const handleSetAmountIn = useCallback(
@@ -81,18 +84,18 @@ const Swap = () => {
   );
 
   const handleSetMaxTokenIn = useCallback(() => {
-    if (tokenIn.balance) {
-      setAmountIn(tokenIn.balance);
+    if (tokenInBalance && tokenInBalance !== "0") {
+      setAmountIn(tokenInBalance);
 
       // Calculate amount out if we have exchange rate
       if (exchangeRate && tokenIn.address && tokenOut.address) {
         const calculatedAmountOut = (
-          parseFloat(tokenIn.balance) * exchangeRate
+          parseFloat(tokenInBalance) * exchangeRate
         ).toFixed(6);
         setAmountOut(calculatedAmountOut);
       }
     }
-  }, [tokenIn, exchangeRate, tokenOut]);
+  }, [tokenIn, exchangeRate, tokenOut, tokenInBalance]);
 
   // Add reverse function to swap token in and token out
   const handleReverseTokens = useCallback(() => {
@@ -146,6 +149,37 @@ const Swap = () => {
       return parts[2] === tokenIn.symbol;
     });
   }
+
+  const fetchTokenBalance = useCallback(
+    async (token, balanceSetter) => {
+      if (!token || !token.symbol || !currentAccount) {
+        balanceSetter("0");
+        return "0";
+      }
+
+      setBalanceLoading(true);
+      try {
+        const balance = await getTokenBalance(token.symbol, currentAccount);
+        balanceSetter(balance);
+        return balance;
+      } catch (error) {
+        console.error(`Error fetching balance for ${token.symbol}:`, error);
+        toast({
+          title: t("common.error"),
+          description: t("toast.failed_to_load_balance"),
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        balanceSetter("0");
+        return "0";
+      } finally {
+        setBalanceLoading(false);
+      }
+    },
+    [currentAccount, t, toast]
+  );
+
   // Fetch token price using the token address
   const fetchTokenPrice = useCallback(
     async (token, balanceSetter, valueSetter) => {
@@ -162,10 +196,11 @@ const Swap = () => {
         );
         const tokenPrice = response.data || 0;
         const formattedPrice = tokenPrice?.[coins]?.price;
-        const balance = await getTokenBalance(token.symbol);
-        balanceSetter(balance);
 
-        valueSetter((parseFloat(balance) * formattedPrice).toFixed(9));
+        const balance = await fetchTokenBalance(token, balanceSetter);
+
+        const usdValue = (parseFloat(balance) * formattedPrice).toFixed(9);
+        valueSetter(usdValue);
 
         return formattedPrice;
       } catch (error) {
@@ -182,21 +217,8 @@ const Swap = () => {
         setLoading(false);
       }
     },
-    [t, toast]
+    [t, toast, fetchTokenBalance]
   );
-
-  const getTokenBalance = async (tokenSymbol) => {
-    // This is a mock function - replace with actual wallet integration
-    const mockBalances = {
-      SUI: "10.5",
-      USDC: "100",
-      FISH: "250",
-      JWLCETUS: "5",
-      SUIGGA: "20",
-    };
-
-    return mockBalances[tokenSymbol] || "0";
-  };
 
   useEffect(() => {
     const updateExchangeRate = async () => {
@@ -239,7 +261,17 @@ const Swap = () => {
     };
 
     updateExchangeRate();
-  }, [tokenIn, tokenOut, fetchTokenPrice]);
+
+    // Also update balances when wallet changes
+    if (currentAccount?.address) {
+      if (tokenIn.symbol) {
+        fetchTokenBalance(tokenIn, setTokenInBalance);
+      }
+      if (tokenOut.symbol) {
+        fetchTokenBalance(tokenOut, setTokenOutBalance);
+      }
+    }
+  }, [tokenIn, tokenOut, fetchTokenPrice, currentAccount, fetchTokenBalance]);
 
   // Handler for token selection
   const handleSelectTokenIn = useCallback(
@@ -259,7 +291,7 @@ const Swap = () => {
     },
     [fetchTokenPrice, closeTokenOut]
   );
-  console.log("tokenOutValue", tokenOutValue);
+
   return (
     <Center
       bg="transparent"
@@ -350,6 +382,7 @@ const Swap = () => {
                     }}
                     lineHeight={"0px"}
                     mx={"5px"}
+                    isLoading={balanceLoading}
                   >
                     {t(`common.max`)}
                   </Button>
@@ -385,8 +418,11 @@ const Swap = () => {
               </InputGroup>
               {tokenIn.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {tokenInBalance} {tokenIn.symbol} ($
-                  {formatValue(Number(tokenInValue))})
+                  Balance: {balanceLoading ? "Loading..." : tokenInBalance}{" "}
+                  {tokenIn.symbol}
+                  {!balanceLoading &&
+                    tokenInValue !== "0" &&
+                    ` ($${formatValue(Number(tokenInValue))})`}
                 </Text>
               )}
             </Flex>
@@ -490,8 +526,11 @@ const Swap = () => {
               </InputGroup>
               {tokenOut.symbol && (
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={2}>
-                  Balance: {tokenOutBalance} {tokenOut.symbol} ($
-                  {formatValue(Number(tokenOutValue))})
+                  Balance: {balanceLoading ? "Loading..." : tokenOutBalance}{" "}
+                  {tokenOut.symbol}
+                  {!balanceLoading &&
+                    tokenOutValue !== "0" &&
+                    ` ($${formatValue(Number(tokenOutValue))})`}
                 </Text>
               )}
             </Flex>
@@ -517,12 +556,17 @@ const Swap = () => {
                 "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
               background: "linear-gradient(90deg, #06eeff 0%, #40ff9f 100%)",
             }}
-            isLoading={loading}
+            isLoading={loading || balanceLoading}
             isDisabled={
-              !tokenIn.symbol || !tokenOut.symbol || amountIn === "0" || loading
+              !tokenIn.symbol ||
+              !tokenOut.symbol ||
+              amountIn === "0" ||
+              loading ||
+              balanceLoading ||
+              !currentAccount
             }
           >
-            {t("common.swap")}
+            {!currentAccount ? "Connect Wallet" : t("common.swap")}
           </Button>
         </Box>
       </Box>
