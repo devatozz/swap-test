@@ -31,7 +31,15 @@ function formatValue(value) {
     return parseFloat(value.toFixed(precision));
   }
 }
-
+const formatNumber = (value) => {
+  if (!value) return "";
+  const cleanedValue = value.replace(/,/g, "");
+  const [integer, decimal] = cleanedValue.split(".");
+  const formattedInteger = parseInt(integer, 10).toLocaleString("en-US");
+  return decimal !== undefined
+    ? `${formattedInteger}.${decimal}`
+    : formattedInteger;
+};
 const Swap = () => {
   const { t } = useLanguage();
   const toast = useToast();
@@ -327,13 +335,13 @@ const Swap = () => {
             <Flex gap={6} flexDirection={"column"} mt={2}>
               <InputGroup justifyContent={"space-between"}>
                 <Input
-                  value={amountIn === "0" ? "" : amountIn}
+                  value={amountIn === "0" ? "" : formatNumber(amountIn)}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    const sanitizedValue = value.startsWith("-")
-                      ? value.slice(1).replace(/,/g, ".")
-                      : value.replace(/,/g, ".");
-                    handleSetAmountIn(sanitizedValue);
+                    let value = e.target.value;
+
+                    value = value.replace(/[^0-9.]/g, "");
+
+                    handleSetAmountIn(value);
                   }}
                   placeholder="0.00"
                   border="none"
@@ -373,7 +381,7 @@ const Swap = () => {
                     borderRadius={"24px"}
                     fontSize={{ base: "14px", md: "16px" }}
                     onClick={handleSetMaxTokenIn}
-                    bg={" linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"}
+                    bg={"linear-gradient(90deg, #40FF9F 0%, #06EEFF 100%)"}
                     _hover={{
                       boxShadow:
                         "0 0 15px rgba(6, 238, 255, 0.6), 0 0 10px rgba(64, 255, 159, 0.4)",
